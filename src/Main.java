@@ -7,10 +7,11 @@ public class Main {
 		if (args.length == 0) {
 			System.out.println("Give config file name");
 		}
-		File config = new File(args[0]);
+		File cFile = new File(args[0]);
+		Config config = new Config(cFile);
+		
+		FacilityManager manager = new FacilityManager();
+		manager.run();
+		
 	}
-	
-	FileReader fr = new FileReader(config);
-	
-
 }
