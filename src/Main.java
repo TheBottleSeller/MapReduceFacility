@@ -11,7 +11,7 @@ public class Main {
 				if (args[0].equals("-m")) {
 					// FacilityManager should behaves as the master.
 					Config config = new Config(new File(args[1]));
-					facilityManager = new FacilityManager();
+					facilityManager = new FacilityManager(config);
 				} else {
 					// FacilityManager should behave as a slave.
 					String masterIp = args[1];
@@ -29,12 +29,6 @@ public class Main {
 			System.exit(0);
 		}
 
-		ProcessBuilder pb = new ProcessBuilder("myshellScript.sh", "myArg1", "myArg2");
-		Map<String, String> env = pb.environment();
-		env.put("VAR1", "myValue");
-		env.remove("OTHERVAR");
-		env.put("VAR2", env.get("VAR1") + "suffix");
-		pb.directory(new File("myDir"));
-		Process p = pb.start();
+	
 	}
 }

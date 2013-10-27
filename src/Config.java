@@ -65,4 +65,36 @@ public class Config implements Serializable {
 			e.printStackTrace();
 		}
 	}
+	
+	public String getMasterIp() {
+		return masterIp;
+	}
+
+	public String[] getParticipantIps() {
+		return participantIps;
+	}
+
+	public int getFsPort() {
+		return fsPort;
+	}
+
+	public int getMrPort() {
+		return mrPort;
+	}
+
+	public int getMaxMapsPerHost() {
+		return maxMapsPerHost;
+	}
+
+	public int getMaxReducesPerHost() {
+		return maxReducesPerHost;
+	}
+
+	public int getReplicationFactor() {
+		return replicationFactor;
+	}
+
+	public int getBlockSize() {
+		return blockSize;
+	}
 }

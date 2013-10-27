@@ -1,8 +1,7 @@
 #!/bin/bash
 args=("$@")
-username=args[0]
-slaveHost=args[1]
-masterHost=args[2]
+slaveHost=args[0]
+masterHost=args[1]
 
-ssh ${username}@${masterHost}
-./afs/andrew.cmu.edu/usr10/nbatliva
+ssh -o StrictHostKeyChecking=no ${slaveHost}
+java -jar Main.jar -s ${masterHost}
