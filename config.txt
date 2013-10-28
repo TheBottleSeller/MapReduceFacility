@@ -1,7 +1,7 @@
 #The IP address of the master node.
 MASTER_IP=[value0]
 
-#The IP addresses of the participant nodes, separated by commas.
+#The IP addresses of the participant nodes, separated by commas. The master node must be included in this list.
 PARTICIPANT_IPS=[value1],[value2],[value3]
 
 #The ports for file system communication.

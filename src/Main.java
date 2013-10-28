@@ -1,6 +1,5 @@
 import java.io.File;
 import java.io.IOException;
-import java.util.Map;
 
 public class Main {
 
@@ -17,15 +16,14 @@ public class Main {
 				int port = Integer.parseInt(args[2]);
 				facilityManager = new FacilityManager(masterIp, port);
 			} else {
-				System.out
-						.println("Usage: FacilityManager -m <configFile> for masters and "
-								+ "FacilityManager -s <hostname> for participants");
+				System.out.println("Usage: FacilityManager -m <configFile> for masters and "
+					+ "FacilityManager -s <hostname> for participants.");
 				return;
 			}
 
 			facilityManager.run();
 		} catch (Exception e) {
-			
+
 			e.printStackTrace();
 			System.exit(0);
 		}
