@@ -5,27 +5,31 @@ import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
-public class FacilityManagerLocal extends Thread {
+public class FacilityManagerLocal extends Thread implements FacilityManager {
 
 	private static final String PROMPT = "=> ";
-	private static String startParticipantScript = "start_participant.sh";
 
 	private FSImpl fs;
 	private Config config;
-	private boolean isMaster;
 	private ServerSocket socketServer;
+	private FacilityManagerMaster master;
 
 	public FacilityManagerLocal(Config config) throws IOException {
 		this.config = config;
-		this.isMaster = true;
 		this.fs = new FSImpl(config);
 	}
 
-	public FacilityManagerLocal(String masterIp, int port) throws UnknownHostException, IOException {
-		this.isMaster = false;
-		this.fs = new FSImpl(config);
+	public FacilityManagerLocal(String masterIp, int port) throws UnknownHostException,
+		IOException, NotBoundException {
+		this.fs = new FSImpl(config);		
+		this.master = (FacilityManagerMaster) LocateRegistry.getRegistry(1234).lookup("MASTER");
 		connectMaster(masterIp, port);
 	}
 
@@ -64,5 +68,10 @@ public class FacilityManagerLocal extends Thread {
 	
 	public Config getConfig() {
 		return config;
+	}
+
+	@Override
+	public Map<Integer, Set<Integer>> distributeBlocks() throws RemoteException {
+		return null;
 	}
 }

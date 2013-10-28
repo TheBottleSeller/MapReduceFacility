@@ -1,6 +1,10 @@
 import java.io.IOException;
 import java.net.InetAddress;
+import java.rmi.AlreadyBoundException;
 import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.UnicastRemoteObject;
 import java.util.Map;
 import java.util.Set;
 
@@ -8,8 +12,10 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 
 	private static String startParticipantScript = "start_participant.sh";
 
-	public FacilityManagerMaster(Config config, int port) throws IOException {
+	public FacilityManagerMaster(Config config) throws IOException, AlreadyBoundException {
 		super(config);
+		Registry r = LocateRegistry.createRegistry(1234);
+		r.bind("MASTER", UnicastRemoteObject.exportObject(this, 0));
 		connectParticipants();
 	}
 	
