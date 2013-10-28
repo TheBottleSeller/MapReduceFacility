@@ -4,6 +4,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Serializable;
+import java.util.Arrays;
 
 public class Config implements Serializable {
 
@@ -36,7 +37,7 @@ public class Config implements Serializable {
 						System.out.println("masterIp: " + masterIp);
 					} else if (line.startsWith("PARTICIPANT_IPS")) {
 						participantIps = line.substring(line.indexOf('=') + 1).split(",");
-						System.out.println("participantIps: " + participantIps);
+						System.out.println("participantIps: " + Arrays.toString(participantIps));
 					} else if (line.startsWith("FS_PORT")) {
 						fsPort = Integer.parseInt(line.substring(line.indexOf('=') + 1));
 						System.out.println("fsPort: " + fsPort);

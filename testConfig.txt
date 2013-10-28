@@ -1,8 +1,8 @@
 #The IP address of the master node.
-MASTER_IP=ghc12.ghc.andrew.cmu.edu
+MASTER_IP=unix12.andrew.cmu.edu
 
 #The IP addresses of the participant nodes, separated by commas.
-PARTICIPANT_IPS=ghc13.ghc.andrew.cmu.edu
+PARTICIPANT_IPS=unix13.andrew.cmu.edu
 
 #The ports for file system communication.
 FS_PORT=8081

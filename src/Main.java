@@ -25,6 +25,7 @@ public class Main {
 
 			facilityManager.run();
 		} catch (Exception e) {
+			
 			e.printStackTrace();
 			System.exit(0);
 		}

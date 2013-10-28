@@ -1,8 +1,6 @@
 #!/bin/bash
-args=("$@")
-slaveHost=args[0]
-masterHost=args[1]
-fsPort=args[2]
+slaveHost=$1
+masterHost=$2
+fsPort=$3
 
-ssh -o StrictHostKeyChecking=no ${slaveHost}
-java -jar Main.jar -s ${masterHost} ${fsPort}
+ssh -t -o StrictHostKeyChecking=no ${slaveHost} "java -jar MapReduceFacility.jar -s ${masterHost} ${fsPort}"

@@ -1,4 +1,5 @@
 import java.io.IOException;
+import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.InetAddress;
 import java.net.ServerSocket;
@@ -8,6 +9,7 @@ import java.util.Scanner;
 
 public class FacilityManager extends Thread {
 
+	private static String startParticipantScript = "start_participant.sh";
 	private Config config;
 	private boolean isMaster;
 	private static final String PROMPT = "=> ";
@@ -36,9 +38,12 @@ public class FacilityManager extends Thread {
 	}
 
 	public void connectParticipants() throws IOException {
+		String localAddress = InetAddress.getLocalHost().getHostAddress();
 		for (String slaveIp : config.getParticipantIps()) {
-			ProcessBuilder pb = new ProcessBuilder("start_participant.sh",
-					slaveIp, InetAddress.getLocalHost().getHostAddress(), "" + config.getFsPort());
+			// execute script
+			String command = "./" + startParticipantScript;
+			ProcessBuilder pb = new ProcessBuilder(command,
+					slaveIp, localAddress, "" + config.getFsPort());
 			pb.directory(null);
 			Process p = pb.start();
 		}
@@ -46,6 +51,13 @@ public class FacilityManager extends Thread {
 	
 	public void connectMaster(String masterIp, int port) throws UnknownHostException, IOException {
 		Socket s = new Socket(masterIp, port);
+		ObjectInputStream in = (ObjectInputStream) s.getInputStream();
+		try {
+			Config config = (Config) in.readObject();
+		} catch (ClassNotFoundException e) {
+			
+			e.printStackTrace();
+		}
 	}
 	
 	public class Server extends Thread {
@@ -59,7 +71,7 @@ public class FacilityManager extends Thread {
 			while (true) {
 				try {
 					final Socket s = socket.accept();
-					
+					System.out.println("Slave connected");
 					new Thread(new Runnable() {
 						public void run() {
 							ObjectOutputStream out;
