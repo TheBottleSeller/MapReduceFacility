@@ -2,7 +2,7 @@
 MASTER_IP=unix12.andrew.cmu.edu
 
 #The IP addresses of the participant nodes, separated by commas.
-PARTICIPANT_IPS=unix13.andrew.cmu.edu
+PARTICIPANT_IPS=unix13.andrew.cmu.edu, unix12.andrew.cmu.edu
 
 #The ports for file system communication.
 FS_PORT=8081
