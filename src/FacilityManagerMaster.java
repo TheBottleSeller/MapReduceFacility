@@ -14,8 +14,9 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 
 	public FacilityManagerMaster(Config config) throws IOException, AlreadyBoundException {
 		super(config);
+		master = this;
 		Registry r = LocateRegistry.createRegistry(1234);
-		r.bind("MASTER", UnicastRemoteObject.exportObject(this, 0));
+		r.bind("MASTER", UnicastRemoteObject.exportObject(master, 0));
 		connectParticipants();
 	}
 	

@@ -19,7 +19,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	private FSImpl fs;
 	private Config config;
 	private ServerSocket socketServer;
-	private FacilityManagerMaster master;
+	protected FacilityManagerMaster master;
 
 	public FacilityManagerLocal(Config config) throws IOException {
 		this.config = config;
