@@ -49,6 +49,7 @@ public class HealthChecker extends Thread {
 	}
 	
 	public synchronized void addConnection(int id, FacilityManager slaveManager) {
+		System.out.println("HEALTH CHECK SLAVE ADDED " + id);
 		slaves.put(id, slaveManager);
 	};
 	
