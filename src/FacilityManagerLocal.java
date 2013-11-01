@@ -61,7 +61,12 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 				File file = new File(command.substring(fileNameStart, nameSpaceStart - 2));
 				if (file.exists()) {
 					String namespace = command.substring(nameSpaceStart);
-					fs.upload(file, namespace);
+					try {
+						fs.upload(file, namespace);
+					} catch (IOException e) {
+						System.out.println("There was an error uploading the file!");
+						e.printStackTrace();
+					}
 				} else {
 					System.out.println("Error: File does not exist.");
 					System.out.println(PROMPT);
