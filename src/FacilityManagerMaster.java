@@ -24,8 +24,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 	private int currentNode;
 
 	private HealthChecker healthChecker;
-	private Set<Integer> unhealthySlaves;
-
+	
 	public FacilityManagerMaster(Config config) throws IOException,
 			AlreadyBoundException, InterruptedException {
 		super(config);
@@ -91,10 +90,12 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 				.synchronizedMap(new HashMap<Integer, Set<Integer>>());
 		for (int i = 0; i < numBlocks; i++) {
 			for (int j = 0; j < getConfig().getReplicationFactor(); j++) {
+				while (!healthChecker.isHealthy(currentNode)) {
+					currentNode = (currentNode + 1)
+							% (getConfig().getParticipantIps().length);
+				}
 				blocksToNodes.get(i).add(currentNode);
 				blocksToNodes.put(i, blocksToNodes.get(i));
-				currentNode = (currentNode + 1)
-						% (getConfig().getParticipantIps().length);
 			}
 		}
 

@@ -14,4 +14,5 @@ public interface FacilityManager extends Remote {
 	
 	public boolean heartBeat() throws RemoteException;
 
+	public int getNodeId() throws RemoteException;
 }
