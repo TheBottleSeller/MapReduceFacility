@@ -11,6 +11,7 @@ import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -19,7 +20,7 @@ import java.util.Map;
 import java.util.Set;
 
 public class FSImpl implements FS {
-	
+
 	private static String ROOT_FS_PATH = "~/fs440/";
 	private static int WRITE_PORT = 8083;
 	private static int READ_PORT = 8084;
@@ -33,7 +34,7 @@ public class FSImpl implements FS {
 				.synchronizedMap(new HashMap<String, Set<Integer>>());
 		this.manager = manager;
 		blockSize = manager.getConfig().getBlockSize();
-		
+
 		// set up root directory of local fs
 		File root = new File(ROOT_FS_PATH);
 		if (!root.exists()) {
@@ -47,67 +48,130 @@ public class FSImpl implements FS {
 	@Override
 	public void upload(File file, String namespace) throws IOException {
 		
-		int numLines = getNumLines(file);
-		if (numLines == 0) {
-			return;
-		}
+		int totalLines = getNumLines(file);
 		
-		int numBlocks = (int) Math.ceil(numLines * 1.0 / manager.getConfig().getBlockSize());
+		int numBlocks = Math.max(1, (int) Math.ceil(totalLines * 1.0 / manager.getConfig().getBlockSize()));
 		
 		try {
 			Map<Integer, Set<Integer>> blockDistribution = manager
-					.distributeBlocks(namespace, numLines);
+					.distributeBlocks(namespace, totalLines);
 			
 			// invert the map to get blockIndex -> nodeId map
-			Map<Integer, Integer> blockToNode = new HashMap<Integer, Integer>();
+			Map<Integer, Set<Integer>> blockToNodes = new HashMap<Integer, Set<Integer>>();
 			for (int nodeId : blockDistribution.keySet()) {
 				for (int blockIndex : blockDistribution.get(nodeId)) {
-					blockToNode.put(blockIndex, nodeId);
+					Set<Integer> nodes = blockToNodes.get(blockIndex);
+					if (nodes == null) {
+						nodes = new HashSet<Integer>();
+						blockToNodes.put(blockIndex, nodes);
+					}
+					nodes.add(nodeId);
 				}
 			}
 			
 			BufferedReader reader = new BufferedReader(new FileReader(file));
 			for (int i = 0; i < numBlocks; i++) {
-				int nodeId = blockToNode.get(i);
-				if (manager.getNodeId() == nodeId) {
-					localWrite(reader, namespace, i);
-				} else {
-					remoteWrite(reader, nodeId, i);
+				Set<Integer> nodes = blockToNodes.get(i);
+				int numNodes = nodes.size();
+				int numReplicated = 0;
+				int numLines = Math.min(blockSize, totalLines - blockSize * i);
+				
+				for (int nodeId : nodes) {
+					boolean success = false;
+					int attempts = 0;
+					int maxAttempts = manager.getConfig().getParticipantIps().length;
+					while (attempts < maxAttempts) {
+						// upper bound size of each line to 100 characters
+						reader.mark(blockSize*100);
+						if (manager.getNodeId() == nodeId) {
+							success = localWrite(reader, namespace, i, numLines);
+						} else {
+							success = remoteWrite(reader, nodeId, namespace, i, numLines);
+						}
+						if (numReplicated != numNodes - 1) {
+							reader.reset();
+						}
+						if (!success) {
+							nodeId = manager.redistributeBlock(nodeId);
+							attempts++;
+						} else {
+							manager.updateFSTable(namespace, i, nodeId);
+							break;
+						}
+					}
+					if (success) {
+						numReplicated++;
+					} else {
+						System.out.println("Could not upload file. No participants responding");
+					}
 				}
 			}
-			is.close();
+			reader.close();
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
 	}
-	
-	public void localWrite(BufferedReader reader, String namespace, int blockIndex) throws IOException {
+
+	public boolean localWrite(BufferedReader reader, String namespace,
+			int blockIndex, int numLines) {
+		boolean success = false;
 		File file = new File(createFilePath(namespace, blockIndex));
 		if (file.exists()) {
 			file.delete();
 		}
-		file.createNewFile();
-		
-		FileOutputStream fos = new FileOutputStream(file);
-		PrintWriter writer = new PrintWriter(fos);
-		for (int i = 0; i < blockSize; i++) {
-			String record = reader.readLine();
-			// check if EOF
-			if (record == null) {
-				break;
-			} else {
+		try {
+			file.createNewFile();
+			FileOutputStream fos = new FileOutputStream(file);
+			PrintWriter writer = new PrintWriter(fos);
+			for (int i = 0; i < numLines; i++) {
+				String record = reader.readLine();
 				writer.write(record);
-				if (i != blockSize - 1) {
+				if (i != numLines - 1) {
 					writer.write('\n');
 				}
 			}
+			writer.close();
+			addToLocalFiles(namespace, blockIndex);
+			success = true;
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		writer.close();
-		addToLocalFiles(namespace, blockIndex);
+		return success;
 	}
-	
-	public void remoteWrite(BufferedReader reader, )
-	
+
+	public boolean remoteWrite(BufferedReader reader, int nodeId,
+			String namespace, int blockIndex, int numLines) {
+		String nodeAddress;
+		boolean success = false;
+		try {
+			nodeAddress = manager.getConfig().getParticipantIps()[nodeId];
+			Socket socket = new Socket(nodeAddress, WRITE_PORT);
+
+			ObjectOutputStream out = new ObjectOutputStream(
+					socket.getOutputStream());
+			out.flush();
+			ObjectInputStream in = new ObjectInputStream(
+					socket.getInputStream());
+
+			out.writeUTF(namespace);
+			out.writeInt(blockIndex);
+			out.writeInt(numLines);
+			out.flush();
+
+			for (int i = 0; i < numLines; i++) {
+				out.writeUTF(reader.readLine());
+				out.flush();
+			}
+
+			success = in.readBoolean();
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return success;
+	}
+
 	public void addToLocalFiles(String namespace, int blockIndex) {
 		Set<Integer> blocks = localFiles.get(namespace);
 		if (blocks != null) {
@@ -144,13 +208,14 @@ public class FSImpl implements FS {
 			is.close();
 		}
 	}
-	
-	public class Writer extends Thread{
+
+	public class Writer extends Thread {
 		private ServerSocket serverSocket;
+
 		public Writer() throws IOException {
 			serverSocket = new ServerSocket(WRITE_PORT);
 		}
-		
+
 		@Override
 		public void run() {
 			while (true) {
@@ -162,17 +227,14 @@ public class FSImpl implements FS {
 				}
 			}
 		}
-		
-		public void remoteWrite(String nodeIp, File file, int blockIndex) {
-			
-		}
-		
+
 		public class WriterWorker extends Thread {
 			private Socket socket;
+
 			public WriterWorker(Socket socket) {
 				this.socket = socket;
 			}
-			
+
 			public void run() {
 				ObjectOutputStream out = null;
 				ObjectInputStream in = null;
@@ -183,7 +245,7 @@ public class FSImpl implements FS {
 					String namespace = in.readUTF();
 					int blockIndex = in.readInt();
 					int numLines = in.readInt();
-					
+
 					File file = new File(createFilePath(namespace, blockIndex));
 					if (file.exists()) {
 						file.delete();
@@ -197,14 +259,14 @@ public class FSImpl implements FS {
 							writer.write("\n");
 						}
 					}
-					
+
 					addToLocalFiles(namespace, blockIndex);
 					writer.close();
 					success = true;
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
-				
+
 				try {
 					if (out != null) {
 						out.writeBoolean(success);
@@ -216,13 +278,13 @@ public class FSImpl implements FS {
 			}
 		}
 	}
-	
+
 	public class Reader {
 		public Reader() {
-			
+
 		}
 	}
-	
+
 	public String createFilePath(String namespace, int blockIndex) {
 		return ROOT_FS_PATH + namespace + "-" + blockIndex + ".pt";
 	}

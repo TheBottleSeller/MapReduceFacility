@@ -86,8 +86,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		int blockSize = getConfig().getBlockSize();
 		int numBlocks = numRecords / blockSize
 				+ (numRecords % blockSize == 0 ? 0 : 1);
-		Map<Integer, Set<Integer>> blocksToNodes = Collections
-				.synchronizedMap(new HashMap<Integer, Set<Integer>>());
+		Map<Integer, Set<Integer>> blocksToNodes = new HashMap<Integer, Set<Integer>>();
 		for (int i = 0; i < numBlocks; i++) {
 			for (int j = 0; j < getConfig().getReplicationFactor(); j++) {
 				while (!healthChecker.isHealthy(currentNode)) {
@@ -99,7 +98,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 			}
 		}
 
-		fsTable.put(namespace, blocksToNodes);
+		//fsTable.put(namespace, blocksToNodes);
 		return blocksToNodes;
 	}
 
@@ -117,7 +116,33 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		return getConfig();
 	}
 	
+	@Override
+	public synchronized int redistributeBlock(int nodeId) {
+		if (nodeId == currentNode) {
+			currentNode++;
+		}
+		return currentNode++;
+	}
+	
+	@Override
+	public void updateFSTable(String namespace, int blockIndex, int nodeId)
+			throws RemoteException {
+		Map<Integer, Set<Integer>> blocksToNodes = fsTable.get(namespace);
+		if (blocksToNodes == null) {
+			blocksToNodes = Collections
+					.synchronizedMap(new HashMap<Integer, Set<Integer>>());
+			fsTable.put(namespace, blocksToNodes);
+		}
+		Set<Integer> nodes = blocksToNodes.get(blockIndex);
+		if (nodes == null) {
+			nodes = Collections.synchronizedSet(new HashSet<Integer>());
+			blocksToNodes.put(blockIndex, nodes);
+		}
+		nodes.add(nodeId);
+	}
+	
 	public void slaveDied(int id) {
 		System.out.println("Slave died " + slaveAddresses.get(id));
 	}
+
 }
