@@ -99,4 +99,15 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	public int getNodeId() {
 		return id;
 	}
+
+	@Override
+	public int redistributeBlock(int nodeId) throws RemoteException {
+		return master.redistributeBlock(nodeId);
+	}
+
+	@Override
+	public void updateFSTable(String namespace, int blockIndex, int nodeId)
+			throws RemoteException {
+		master.updateFSTable(namespace, blockIndex, nodeId);
+	}
 }

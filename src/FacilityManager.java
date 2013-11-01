@@ -15,4 +15,8 @@ public interface FacilityManager extends Remote {
 	public boolean heartBeat() throws RemoteException;
 
 	public int getNodeId() throws RemoteException;
+
+	public int redistributeBlock(int nodeId) throws RemoteException;
+
+	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException;
 }
