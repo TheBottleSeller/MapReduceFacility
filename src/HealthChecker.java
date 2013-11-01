@@ -51,4 +51,8 @@ public class HealthChecker extends Thread {
 	public synchronized void addConnection(int id, FacilityManager slaveManager) {
 		slaves.put(id, slaveManager);
 	};
+	
+	public boolean isHealthy(int id) {
+		return slaves.get(id) != null;
+	}
 }

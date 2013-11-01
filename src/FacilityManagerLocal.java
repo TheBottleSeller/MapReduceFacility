@@ -27,7 +27,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	// constructor used by master
 	public FacilityManagerLocal(Config config) throws IOException {
 		this.config = config;
-		this.fs = new FSImpl(config, this);
+		this.fs = new FSImpl(this);
 		id = -1;
 	}
 
@@ -39,7 +39,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 		master = (FacilityManager) masterRegistry.lookup(REGISTRY_MASTER_KEY);
 		registry = LocateRegistry.createRegistry(port);
 		registry.bind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
-		this.fs = new FSImpl(config, master);
+		this.fs = new FSImpl(this);
 		this.config = master.connect(id);
 	}
 
@@ -52,7 +52,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 			System.out.println(PROMPT);
 			/*
 			 *  upload a file into the distributed file system
-			 *  cmd: upload local-file-path
+			 *  cmd: upload local-file-path namespace
 			 */
 			if (command.startsWith("upload")) {
 				// Get the filename and namespace.
@@ -82,11 +82,16 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	@Override
 	public Map<Integer, Set<Integer>> distributeBlocks(String namespace,
 			int numRecords) throws RemoteException {
-		return null;
+		return master.distributeBlocks(namespace, numRecords);
 	}
 
 	@Override
 	public boolean heartBeat() throws RemoteException {
 		return true;
+	}
+	
+	@Override
+	public int getNodeId() {
+		return id;
 	}
 }

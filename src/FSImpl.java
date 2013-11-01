@@ -1,8 +1,14 @@
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.io.PrintWriter;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.rmi.RemoteException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -10,18 +16,29 @@ import java.util.Map;
 import java.util.Set;
 
 public class FSImpl implements FS {
+	
+	private static String ROOT_FS_PATH = "~/fs440/";
+	private static int WRITE_PORT = 8083;
+	private static int READ_PORT = 8084;
 
-	private Map<String, Map<Integer, Set<Integer>>> fsTable;
-	private Config config;
+	private Map<String, Set<Integer>> localFiles;
 	private int lastNode;
-	private FacilityManager master;
+	private FacilityManager manager;
 
-	public FSImpl(Config config, FacilityManager master) {
-		this.fsTable = Collections
-			.synchronizedMap(new HashMap<String, Map<Integer, Set<Integer>>>());
-		this.config = config;
-		this.master = master;
+	public FSImpl(FacilityManager manager) {
+		localFiles = Collections
+				.synchronizedMap(new HashMap<String, Set<Integer>>());
+		this.manager = manager;
 		this.lastNode = 0;
+		
+		// set up root directory of local fs
+		File root = new File(ROOT_FS_PATH);
+		if (!root.exists()) {
+			root.mkdir();
+		} else if (!root.isDirectory()) {
+			root.delete();
+			root.mkdir();
+		}
 	}
 
 	@Override
@@ -32,9 +49,18 @@ public class FSImpl implements FS {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		try {
-			master.distributeBlocks(namespace, numLines);
+			Map<Integer, Set<Integer>> blockDistribution = manager
+					.distributeBlocks(namespace, numLines);
+			for (int nodeId : blockDistribution.keySet()) {
+				if (manager.getNodeId() == nodeId) {
+					localFiles.put(namespace, blockDistribution.get(nodeId));
+
+				} else {
+					// send 
+				}
+			}
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -64,5 +90,67 @@ public class FSImpl implements FS {
 		} finally {
 			is.close();
 		}
+	}
+	
+	public class Writer extends Thread{
+		private ServerSocket serverSocket;
+		public Writer() throws IOException {
+			serverSocket = new ServerSocket(WRITE_PORT);
+		}
+		
+		@Override
+		public void run() {
+			while (true) {
+				try {
+					Socket socket = serverSocket.accept();
+					
+				} catch (IOException e) {
+					// ignore and keep listening
+				}
+			}
+		}
+		
+		public class WriterWorker extends Thread {
+			private Socket socket;
+			public WriterWorker(Socket socket) {
+				this.socket = socket;
+			}
+			
+			public void run() {
+				ObjectOutputStream out;
+				ObjectInputStream in;
+				try {
+					out = new ObjectOutputStream(socket.getOutputStream());
+					in = new ObjectInputStream(socket.getInputStream());
+					String namespace = in.readUTF();
+					int blockIndex = in.readInt();
+					int numLines = in.readInt();
+					
+					File file = new File(createFilePath(namespace, blockIndex));
+					if (file.exists()) {
+						file.delete();
+					}
+					file.createNewFile();
+					FileOutputStream fos = new FileOutputStream(file);
+					PrintWriter writer = new PrintWriter(fos);
+					for (int i = 0; i < numLines; i++) {
+						writer.write(in.readUTF());
+					}
+					
+				} catch (IOException e) {
+					e.printStackTrace();
+				}			
+			}
+		}
+	}
+	
+	public class Reader {
+		public Reader() {
+			
+		}
+	}
+	
+	public String createFilePath(String namespace, int blockIndex) {
+		return ROOT_FS_PATH + namespace + "-" + blockIndex + ".pt";
 	}
 }
