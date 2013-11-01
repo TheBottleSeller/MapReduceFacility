@@ -74,6 +74,19 @@ public class Config implements Serializable {
 	public String[] getParticipantIps() {
 		return participantIps;
 	}
+	
+	public String[] getSlaveIps() {
+		String[] ips = new String[participantIps.length - 1];
+		int j = 0;
+		for (int i = 0; i < participantIps.length; i++) {
+			if (participantIps[i].equals(masterIp)) {
+				continue;
+			}
+			ips[j] = participantIps[i];
+			j++;
+		}
+		return ips;
+	}
 
 	public int getFsPort() {
 		return fsPort;

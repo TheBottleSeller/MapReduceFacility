@@ -3,6 +3,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.rmi.RemoteException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -13,11 +14,13 @@ public class FSImpl implements FS {
 	private Map<String, Map<Integer, Set<Integer>>> fsTable;
 	private Config config;
 	private int lastNode;
+	private FacilityManager master;
 
-	public FSImpl(Config config) {
+	public FSImpl(Config config, FacilityManager master) {
 		this.fsTable = Collections
 			.synchronizedMap(new HashMap<String, Map<Integer, Set<Integer>>>());
 		this.config = config;
+		this.master = master;
 		this.lastNode = 0;
 	}
 
@@ -29,20 +32,12 @@ public class FSImpl implements FS {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-
-		int blockSize = config.getBlockSize();
-		int numBlocks = numLines / blockSize + (numLines % blockSize == 0 ? 0 : 1);
-		Map<Integer, Set<Integer>> blocksToNodes = Collections
-			.synchronizedMap(new HashMap<Integer, Set<Integer>>());
-		for (int i = 0; i < numBlocks; i++) {
-			for (int j = 0; j < config.getReplicationFactor(); j++) {
-				blocksToNodes.get(i).add(lastNode);
-				blocksToNodes.put(i, blocksToNodes.get(i));
-				lastNode = (lastNode + 1) % (config.getParticipantIps().length - 1);
-			}
+		
+		try {
+			master.distributeBlocks(namespace, numLines);
+		} catch (RemoteException e) {
+			e.printStackTrace();
 		}
-
-		fsTable.put(namespace, blocksToNodes);
 	}
 
 	@Override

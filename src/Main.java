@@ -13,11 +13,12 @@ public class Main {
 				Config config = new Config(new File(args[1]));
 				facilityManager = new FacilityManagerMaster(config);
 				master = facilityManager;
-			} else if (args.length == 3) {
+			} else if (args.length == 4) {
 				// FacilityManager should behave as a slave.
 				String masterIp = args[1];
-				int port = Integer.parseInt(args[2]);
-				facilityManager = new FacilityManagerLocal(masterIp, port);
+				int id = Integer.parseInt(args[2]);
+				int port = Integer.parseInt(args[3]);
+				facilityManager = new FacilityManagerLocal(masterIp, id, port);
 			} else {
 				System.out.println("Usage: FacilityManager -m <configFile> for masters and "
 					+ "FacilityManager -s <hostname> for participants.");
