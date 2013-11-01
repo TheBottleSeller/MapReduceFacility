@@ -35,8 +35,6 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		currentNode = 1;
 		fsTable = Collections
 				.synchronizedMap(new HashMap<String, Map<Integer, Set<Integer>>>());
-		healthChecker = new HealthChecker(this);
-		healthChecker.start();
 		slaveManagers = new HashMap<String, FacilityManager>();
 
 		Registry r = LocateRegistry.createRegistry(config.getMrPort());
@@ -50,6 +48,8 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		while (participants.size() != expectedNumParticipants) {
 			Thread.sleep(1000);
 		}
+		healthChecker = new HealthChecker(this);
+		healthChecker.start();
 		System.out.println("All slaves connected.");
 	}
 
