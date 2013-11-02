@@ -17,6 +17,8 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		FacilityManager {
 
 	private static String startParticipantScript = "start_participant.sh";
+	
+	private int rmiPort;
 	private List<String> participants;
 	private Map<String, FacilityManager> slaveManagers;
 	private Map<Integer, String> slaveAddresses;
@@ -28,6 +30,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 	public FacilityManagerMaster(Config config) throws IOException,
 			AlreadyBoundException, InterruptedException {
 		super(config);
+		rmiPort = config.getMrPort();
 		int expectedNumParticipants = config.getParticipantIps().length;
 		participants = Collections.synchronizedList(new ArrayList<String>(
 				expectedNumParticipants));
@@ -43,13 +46,15 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 				.synchronizedMap(new HashMap<Integer, String>(
 						expectedNumParticipants));
 		connectParticipants();
+		
+		healthChecker = new HealthChecker(this);
+		healthChecker.start();
 
 		System.out.println("Waiting for slaves to connect...");
 		while (participants.size() != expectedNumParticipants) {
 			Thread.sleep(1000);
 		}
-		healthChecker = new HealthChecker(this);
-		healthChecker.start();
+		
 		System.out.println("All slaves connected.");
 	}
 
@@ -71,9 +76,10 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 				continue;
 			}
 			// Execute script.
+			System.out.println("Executing script to start " + slaveIp);
 			String command = "./" + startParticipantScript;
 			ProcessBuilder pb = new ProcessBuilder(command, slaveIp,
-					localAddress, "" + i, "" + getConfig().getMrPort());
+					localAddress, "" + i, "" + rmiPort);
 			pb.directory(null);
 			pb.start();
 			slaveAddresses.put(i, slaveIp);
@@ -106,13 +112,13 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 	public Config connect(int id) throws RemoteException, NotBoundException {
 		String slaveIp = getConfig().getParticipantIps()[id];
 		System.out.println("Slave Connected: " + slaveIp);
-		Registry registry = LocateRegistry.getRegistry(slaveIp, getConfig()
-				.getMrPort());
+		Registry registry = LocateRegistry.getRegistry(slaveIp, rmiPort);
 		FacilityManager slaveManager = (FacilityManager) registry
 				.lookup(REGISTRY_SLAVE_KEY);
 		slaveManagers.put(slaveIp, slaveManager);
 		healthChecker.addConnection(id, slaveManager);
 		participants.add(slaveIp);
+		System.out.println(slaveManager.heartBeat());
 		return getConfig();
 	}
 	

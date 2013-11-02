@@ -1,5 +1,7 @@
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -16,6 +18,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	private static final String PROMPT = "=> ";
 	protected static String REGISTRY_MASTER_KEY = "MASTER";
 	protected static String REGISTRY_SLAVE_KEY = "SLAVE_HEALTH";
+	protected static String LOG_FILE = "error.log";
 
 	private int id;
 	private FSImpl fs;
@@ -26,21 +29,45 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 
 	// constructor used by master
 	public FacilityManagerLocal(Config config) throws IOException {
+		createExceptionHandler();
 		this.config = config;
-		this.fs = new FSImpl(this);
 		id = -1;
+		fs = new FSImpl(this);
 	}
 
 	// constructor used by slave
 	public FacilityManagerLocal(String masterIp, int id, int port) throws UnknownHostException,
 		IOException, NotBoundException, AlreadyBoundException {
+		createExceptionHandler();
 		this.id = id;
 		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
 		master = (FacilityManager) masterRegistry.lookup(REGISTRY_MASTER_KEY);
 		registry = LocateRegistry.createRegistry(port);
-		registry.bind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
-		this.fs = new FSImpl(this);
-		this.config = master.connect(id);
+		registry.rebind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
+		config = master.connect(id);
+		fs = new FSImpl(this);
+	}
+	
+	public void createExceptionHandler() {
+		this.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+			@Override
+			public void uncaughtException(Thread th, Throwable t) {
+				File log = new File(LOG_FILE);
+				if (!log.exists()) {
+					try {
+						log.createNewFile();
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+				try {
+					PrintWriter writer = new PrintWriter(new FileWriter(log));
+					t.printStackTrace(writer);
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
+		});
 	}
 
 	public void run() {

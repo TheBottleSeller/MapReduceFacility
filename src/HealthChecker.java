@@ -23,11 +23,13 @@ public class HealthChecker extends Thread {
 			for (int i = 0; i < participantIps.length; i++) {
 				FacilityManager slaveManager = slaves.get(i);
 				if (slaveManager != null) {
+					System.out.println("HEALTH CHECKER for " + i);
 					boolean heartbeat = false;
 					try {
 						heartbeat = slaveManager.heartBeat();
 						System.out.println("Recieved heartbeat " + i);
 					} catch (RemoteException e) {
+						e.printStackTrace();
 						heartbeat = false;
 					}
 					

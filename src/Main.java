@@ -19,6 +19,7 @@ public class Main {
 				int id = Integer.parseInt(args[2]);
 				int port = Integer.parseInt(args[3]);
 				facilityManager = new FacilityManagerLocal(masterIp, id, port);
+				throw new IOException();
 			} else {
 				System.out.println("Usage: FacilityManager -m <configFile> for masters and "
 					+ "FacilityManager -s <hostname> for participants.");
