@@ -18,7 +18,6 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	private static final String PROMPT = "=> ";
 	protected static String REGISTRY_MASTER_KEY = "MASTER";
 	protected static String REGISTRY_SLAVE_KEY = "SLAVE_HEALTH";
-	protected static String LOG_FILE = "error.log";
 
 	private int id;
 	private FSImpl fs;
@@ -29,45 +28,22 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 
 	// constructor used by master
 	public FacilityManagerLocal(Config config) throws IOException {
-		createExceptionHandler();
 		this.config = config;
 		id = -1;
 		fs = new FSImpl(this);
+		master = this;
 	}
 
 	// constructor used by slave
 	public FacilityManagerLocal(String masterIp, int id, int port) throws UnknownHostException,
 		IOException, NotBoundException, AlreadyBoundException {
-		createExceptionHandler();
 		this.id = id;
+		registry = LocateRegistry.createRegistry(port);
+		registry.bind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
 		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
 		master = (FacilityManager) masterRegistry.lookup(REGISTRY_MASTER_KEY);
-		registry = LocateRegistry.createRegistry(port);
-		registry.rebind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
 		config = master.connect(id);
 		fs = new FSImpl(this);
-	}
-	
-	public void createExceptionHandler() {
-		this.setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-			@Override
-			public void uncaughtException(Thread th, Throwable t) {
-				File log = new File(LOG_FILE);
-				if (!log.exists()) {
-					try {
-						log.createNewFile();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-				try {
-					PrintWriter writer = new PrintWriter(new FileWriter(log));
-					t.printStackTrace(writer);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-			}
-		});
 	}
 
 	public void run() {
@@ -82,7 +58,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 			 *  cmd: upload local-file-path namespace
 			 */
 			if (command.startsWith("upload")) {
-				// Get the filename and namespace.
+				// Get the filename and namespace.xw
 				int fileNameStart = command.indexOf(" ") + 1;
 				int nameSpaceStart = command.lastIndexOf(" ") + 1;
 				File file = new File(command.substring(fileNameStart, nameSpaceStart - 2));
@@ -98,6 +74,11 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 					System.out.println("Error: File does not exist.");
 					System.out.println(PROMPT);
 				}
+			/*
+			 * Exit the system
+			 */
+			} else if (command.startsWith("exit")) {
+				exit();
 			}
 		}
 	}
@@ -136,5 +117,9 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	public void updateFSTable(String namespace, int blockIndex, int nodeId)
 			throws RemoteException {
 		master.updateFSTable(namespace, blockIndex, nodeId);
+	}
+	
+	public void exit() {
+		System.exit(0);
 	}
 }

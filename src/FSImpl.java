@@ -36,13 +36,13 @@ public class FSImpl implements FS {
 		blockSize = manager.getConfig().getBlockSize();
 
 		// set up root directory of local fs
-//		File root = new File(ROOT_FS_PATH);
-//		if (!root.exists()) {
-//			root.mkdir();
-//		} else if (!root.isDirectory()) {
-//			root.delete();
-//			root.mkdir();
-//		}
+		File root = new File(ROOT_FS_PATH);
+		if (!root.exists()) {
+			root.mkdir();
+		} else if (!root.isDirectory()) {
+			root.delete();
+			root.mkdir();
+		}
 	}
 
 	@Override
@@ -210,6 +210,7 @@ public class FSImpl implements FS {
 	}
 
 	public class Writer extends Thread {
+		
 		private ServerSocket serverSocket;
 
 		public Writer() throws IOException {
