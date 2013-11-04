@@ -12,6 +12,7 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,18 +21,21 @@ import java.util.Set;
 
 public class FSImpl implements FS {
 
-	private static String ROOT_FS_PATH = "~/fs440/";
+	private static String ROOT_FS_PATH = "/afs/andrew.cmu.edu/usr10/nbatliva/fs440/";
 	private static int WRITE_PORT = 8083;
 	private static int READ_PORT = 8084;
 
 	private Map<String, Set<Integer>> localFiles;
 	private FacilityManager manager;
 	private int blockSize;
+	private WriteServer writeServer;
 
-	public FSImpl(FacilityManager manager) throws RemoteException {
+	public FSImpl(FacilityManager manager) throws IOException {
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
 		this.manager = manager;
 		blockSize = manager.getConfig().getBlockSize();
+		writeServer = new WriteServer();
+		writeServer.start();
 
 		// set up root directory of local fs
 		File root = new File(ROOT_FS_PATH);
@@ -39,7 +43,7 @@ public class FSImpl implements FS {
 			root.mkdir();
 		} else if (!root.isDirectory()) {
 			root.delete();
-			root.mkdir();
+			root.mkdirs();
 		}
 	}
 
@@ -51,7 +55,15 @@ public class FSImpl implements FS {
 
 		try {
 			Map<Integer, Set<Integer>> blockDistribution = manager.distributeBlocks(namespace,
-				totalLines);
+				numBlocks);
+			
+			for (Integer nodeId: blockDistribution.keySet()) {
+				Set<Integer> blocks = blockDistribution.get(nodeId);
+				System.out.println("Node " + nodeId);
+				for (Integer blockIndex : blocks) {
+					System.out.print(blockIndex);
+				}
+			}
 
 			// invert the map to get blockIndex -> nodeId map
 			Map<Integer, Set<Integer>> blockToNodes = new HashMap<Integer, Set<Integer>>();
@@ -203,11 +215,11 @@ public class FSImpl implements FS {
 		}
 	}
 
-	public class Writer extends Thread {
+	public class WriteServer extends Thread {
 
 		private ServerSocket serverSocket;
 
-		public Writer() throws IOException {
+		public WriteServer() throws IOException {
 			serverSocket = new ServerSocket(WRITE_PORT);
 		}
 

@@ -28,7 +28,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 	public FacilityManagerMaster(Config config) throws IOException, AlreadyBoundException,
 		InterruptedException {
 		super(config);
-		currentNode = 1;
+		currentNode = 0;
 		int expectedNumParticipants = config.getParticipantIps().length;
 		managers = Collections.synchronizedMap(new HashMap<Integer, FacilityManager>(
 			expectedNumParticipants));
@@ -87,22 +87,29 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 	}
 
 	@Override
-	public synchronized Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numRecords)
+	public synchronized Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numBlocks)
 		throws RemoteException {
-		int blockSize = getConfig().getBlockSize();
-		int numBlocks = numRecords / blockSize + (numRecords % blockSize == 0 ? 0 : 1);
 		Map<Integer, Set<Integer>> blocksToNodes = new HashMap<Integer, Set<Integer>>();
 		for (int i = 0; i < numBlocks; i++) {
 			for (int j = 0; j < getConfig().getReplicationFactor(); j++) {
 				while (!healthChecker.isHealthy(currentNode)) {
-					currentNode = (currentNode + 1) % (getConfig().getParticipantIps().length);
+					incrementCurrentNode();
 				}
-				blocksToNodes.get(i).add(currentNode);
-				blocksToNodes.put(i, blocksToNodes.get(i));
+				Set<Integer> nodes = blocksToNodes.get(i);
+				if (nodes == null) {
+					nodes = new HashSet<Integer>();
+					blocksToNodes.put(i, nodes);
+				}
+				nodes.add(currentNode);
+				incrementCurrentNode();
 			}
 		}
 
 		return blocksToNodes;
+	}
+	
+	public void incrementCurrentNode() {
+		currentNode = (currentNode + 1) % (getConfig().getParticipantIps().length);
 	}
 
 	@Override
@@ -122,7 +129,8 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 		if (nodeId == currentNode) {
 			currentNode++;
 		}
-		return currentNode++;
+		incrementCurrentNode();
+		return currentNode;
 	}
 
 	@Override

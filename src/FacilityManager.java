@@ -6,7 +6,7 @@ import java.util.Set;
 
 public interface FacilityManager extends Remote {
 	
-	public Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numRecords) throws RemoteException; 
+	public Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numBlocks) throws RemoteException; 
 	
 	public Config getConfig() throws RemoteException;
 	

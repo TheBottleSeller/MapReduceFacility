@@ -25,7 +25,6 @@ public class HealthChecker extends Thread {
 					boolean heartbeat = false;
 					try {
 						heartbeat = slaveManager.heartBeat();
-						System.out.println("Recieved heartbeat " + i);
 					} catch (RemoteException e) {
 						e.printStackTrace();
 						heartbeat = false;
@@ -53,6 +52,9 @@ public class HealthChecker extends Thread {
 	}
 
 	public boolean isHealthy(int id) {
+		if (id == master.getNodeId()) {
+			return true;
+		}
 		return slaves.get(id) != null;
 	}
 }

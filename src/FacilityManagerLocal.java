@@ -27,9 +27,15 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	// constructor used by master
 	public FacilityManagerLocal(Config config) throws IOException {
 		this.config = config;
-		id = -1;
 		fs = new FSImpl(this);
 		master = this;
+		String[] participants = config.getParticipantIps();
+		for (int i = 0; i < participants.length; i++) {
+			if (participants[i].equals(config.getMasterIp())) {
+				id = i;
+				break;
+			}
+		}
 	}
 
 	// constructor used by slave
@@ -58,7 +64,8 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 				// Get the filename and namespace.xw
 				int fileNameStart = command.indexOf(" ") + 1;
 				int nameSpaceStart = command.lastIndexOf(" ") + 1;
-				File file = new File(command.substring(fileNameStart, nameSpaceStart - 2));
+				File file = new File(command.substring(fileNameStart, nameSpaceStart - 1));
+				System.out.println(file.toString());
 				if (file.exists()) {
 					String namespace = command.substring(nameSpaceStart);
 					try {
@@ -90,9 +97,9 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numRecords)
+	public Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numBlocks)
 		throws RemoteException {
-		return master.distributeBlocks(namespace, numRecords);
+		return master.distributeBlocks(namespace, numBlocks);
 	}
 
 	@Override
