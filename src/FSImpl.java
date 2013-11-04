@@ -1,4 +1,5 @@
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -12,7 +13,6 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.rmi.RemoteException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,7 +21,9 @@ import java.util.Set;
 
 public class FSImpl implements FS {
 
-	private static String FS_PATH = "/fs440/";
+	private static final String DATA_PATH = "/data440/";
+	private static final String CLASS_PATH = "/class440/";
+
 	private static int WRITE_PORT = 8083;
 	private static int READ_PORT = 8084;
 
@@ -30,6 +32,10 @@ public class FSImpl implements FS {
 	private int blockSize;
 	private WriteServer writeServer;
 
+	private enum Messages {
+		WRITE_DATA, WRITE_CLASS;
+	}
+
 	public FSImpl(FacilityManager manager) throws IOException {
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
 		this.manager = manager;
@@ -37,9 +43,17 @@ public class FSImpl implements FS {
 		writeServer = new WriteServer();
 		writeServer.start();
 
-		// set up root directory of local fs
-		String rootFsPath = System.getProperty("user.home") + FS_PATH;
-		File root = new File(rootFsPath);
+		// Set up root directories.
+		createRootDirectory(DATA_PATH);
+		createRootDirectory(CLASS_PATH);
+	}
+
+	private String getRoot() {
+		return System.getProperty("user.home");
+	}
+
+	private void createRootDirectory(String path) {
+		File root = new File(getRoot() + path);
 		if (!root.exists()) {
 			root.mkdir();
 		} else if (!root.isDirectory()) {
@@ -57,8 +71,8 @@ public class FSImpl implements FS {
 		try {
 			Map<Integer, Set<Integer>> blockDistribution = manager.distributeBlocks(namespace,
 				numBlocks);
-			
-			for (Integer nodeId: blockDistribution.keySet()) {
+
+			for (Integer nodeId : blockDistribution.keySet()) {
 				Set<Integer> blocks = blockDistribution.get(nodeId);
 				System.out.println("Node " + nodeId);
 				for (Integer blockIndex : blocks) {
@@ -94,9 +108,9 @@ public class FSImpl implements FS {
 						// upper bound size of each line to 100 characters
 						reader.mark(blockSize * 100);
 						if (manager.getNodeId() == nodeId) {
-							success = localWrite(reader, namespace, i, numLines);
+							success = localWriteData(reader, namespace, i, numLines);
 						} else {
-							success = remoteWrite(reader, nodeId, namespace, i, numLines);
+							success = remoteWriteData(reader, nodeId, namespace, i, numLines);
 						}
 						if (numReplicated != numNodes - 1) {
 							reader.reset();
@@ -120,11 +134,20 @@ public class FSImpl implements FS {
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
+	}	
+	
+	@Override
+	public void mapreduce(Class<?> clazz, String namespace) throws IOException {
+		try {
+			remoteWriteClass(clazz, manager.getNodeId()); 
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
 	}
 
-	public boolean localWrite(BufferedReader reader, String namespace, int blockIndex, int numLines) {
+	public boolean localWriteData(BufferedReader reader, String namespace, int blockIndex, int numLines) {
 		boolean success = false;
-		File file = new File(createFilePath(namespace, blockIndex));
+		File file = new File(createDataFilePath(namespace, blockIndex));
 		if (file.exists()) {
 			file.delete();
 		}
@@ -148,8 +171,8 @@ public class FSImpl implements FS {
 		return success;
 	}
 
-	public boolean remoteWrite(BufferedReader reader, int nodeId, String namespace, int blockIndex,
-		int numLines) {
+	public boolean remoteWriteData(BufferedReader reader, int nodeId, String namespace,
+		int blockIndex, int numLines) {
 		String nodeAddress;
 		boolean success = false;
 		try {
@@ -157,9 +180,10 @@ public class FSImpl implements FS {
 			Socket socket = new Socket(nodeAddress, WRITE_PORT);
 
 			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-			out.flush();
 			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+			out.flush();
 
+			out.writeObject(Messages.WRITE_DATA);
 			out.writeUTF(namespace);
 			out.writeInt(blockIndex);
 			out.writeInt(numLines);
@@ -171,6 +195,42 @@ public class FSImpl implements FS {
 			}
 
 			success = in.readBoolean();
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return success;
+	}
+
+	public boolean remoteWriteClass(Class<?> clazz, int nodeId) {
+		InputStream is = clazz.getResourceAsStream(clazz.getName());
+		boolean success = false;
+		String nodeAddress;
+		try {
+			nodeAddress = manager.getConfig().getParticipantIps()[nodeId];
+			Socket socket = new Socket(nodeAddress, WRITE_PORT);
+
+			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+			out.flush();
+
+			out.writeObject(Messages.WRITE_CLASS);
+			out.writeUTF(clazz.getName());
+
+			try {
+				byte[] c = new byte[1024];
+				while (is.read(c) != -1) {
+					out.write(c);
+					out.flush();
+				}
+				out.write(null);
+				out.flush();
+
+				success = in.readBoolean();
+			} finally {
+				is.close();
+			}
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		} catch (IOException e) {
@@ -231,7 +291,7 @@ public class FSImpl implements FS {
 					Socket socket = serverSocket.accept();
 					new WriterWorker(socket).start();
 				} catch (IOException e) {
-					// ignore and keep listening
+					// Ignore and keep listening.
 				}
 			}
 		}
@@ -250,11 +310,33 @@ public class FSImpl implements FS {
 				try {
 					out = new ObjectOutputStream(socket.getOutputStream());
 					in = new ObjectInputStream(socket.getInputStream());
+
+					if (in.readUTF().equals(Messages.WRITE_DATA)) {
+						success = readDataFile(in);
+					} else { // Write class.
+						success = readClassFile(in);
+					}
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+
+				try {
+					if (out != null) {
+						out.writeBoolean(success);
+						out.flush();
+					}
+				} catch (IOException e) {
+					// Ignore.
+				}
+			}
+
+			private boolean readDataFile(ObjectInputStream in) {
+				try {
 					String namespace = in.readUTF();
 					int blockIndex = in.readInt();
 					int numLines = in.readInt();
 
-					File file = new File(createFilePath(namespace, blockIndex));
+					File file = new File(createDataFilePath(namespace, blockIndex));
 					if (file.exists()) {
 						file.delete();
 					}
@@ -270,18 +352,36 @@ public class FSImpl implements FS {
 
 					addToLocalFiles(namespace, blockIndex);
 					writer.close();
-					success = true;
+					return true;
 				} catch (IOException e) {
 					e.printStackTrace();
+					return false;
 				}
+			}
 
+			private boolean readClassFile(ObjectInputStream in) {
 				try {
-					if (out != null) {
-						out.writeBoolean(success);
-						out.flush();
+					String namespace = in.readUTF();
+					File file = new File(createClassFilePath(namespace));
+					if (file.exists()) {
+						file.delete();
 					}
+					file.createNewFile();
+					FileOutputStream fos = new FileOutputStream(file);
+					BufferedOutputStream bos = new BufferedOutputStream(fos);
+					byte[] c = new byte[1024];
+					while (true) {
+						in.read(c);
+						if (c == null) {
+							break;
+						}
+						bos.write(c);
+					}
+					bos.close();
+					return true;
 				} catch (IOException e) {
-					// ignore
+					e.printStackTrace();
+					return false;
 				}
 			}
 		}
@@ -293,7 +393,11 @@ public class FSImpl implements FS {
 		}
 	}
 
-	public String createFilePath(String namespace, int blockIndex) {
-		return System.getProperty("user.home") + FS_PATH + namespace + "-" + blockIndex + ".pt";
+	public String createDataFilePath(String namespace, int blockIndex) {
+		return getRoot() + DATA_PATH + namespace + "-" + blockIndex + ".pt";
+	}
+
+	public String createClassFilePath(String namespace) {
+		return getRoot() + CLASS_PATH + namespace + ".class";
 	}
 }

@@ -57,11 +57,14 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 		while (scanner.hasNextLine()) {
 			String command = scanner.nextLine();
 			System.out.println(PROMPT);
-			/*
-			 * upload a file into the distributed file system cmd: upload local-file-path namespace
-			 */
-			if (command.startsWith("upload")) {
-				// Get the filename and namespace.xw
+			if (command.equals("-h")) {
+				System.out
+					.println("Commands:\n"
+						+ "-h\tprint the list of commands\n"
+						+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
+						+ "mapreduce <class file> <input file namespace>\trun the specified mapreduce.");
+			} else if (command.startsWith("upload") || command.startsWith("mapreduce")) {
+				// Upload a file into the DFS OR perform mapreduce.
 				int fileNameStart = command.indexOf(" ") + 1;
 				int nameSpaceStart = command.lastIndexOf(" ") + 1;
 				File file = new File(command.substring(fileNameStart, nameSpaceStart - 1));
@@ -69,7 +72,11 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 				if (file.exists()) {
 					String namespace = command.substring(nameSpaceStart);
 					try {
-						fs.upload(file, namespace);
+						if (command.startsWith("upload")) {
+							fs.upload(file, namespace);
+						} else {
+							fs.mapreduce(file.getClass(), namespace);
+						}
 					} catch (IOException e) {
 						System.out.println("There was an error uploading the file!");
 						e.printStackTrace();
@@ -78,10 +85,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 					System.out.println("Error: File does not exist.");
 					System.out.println(PROMPT);
 				}
-				/*
-				 * Exit the system
-				 */
-			} else if (command.startsWith("exit")) {
+			} else if (command.equals("exit")) { // Exit the system.
 				exit();
 			}
 		}
