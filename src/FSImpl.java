@@ -294,6 +294,6 @@ public class FSImpl implements FS {
 	}
 
 	public String createFilePath(String namespace, int blockIndex) {
-		return ROOT_FS_PATH + namespace + "-" + blockIndex + ".pt";
+		return System.getProperty("user.home") + FS_PATH + namespace + "-" + blockIndex + ".pt";
 	}
 }
