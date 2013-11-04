@@ -21,7 +21,7 @@ import java.util.Set;
 
 public class FSImpl implements FS {
 
-	private static String ROOT_FS_PATH = "/afs/andrew.cmu.edu/usr10/nbatliva/fs440/";
+	private static String FS_PATH = "/fs440/";
 	private static int WRITE_PORT = 8083;
 	private static int READ_PORT = 8084;
 
@@ -38,7 +38,8 @@ public class FSImpl implements FS {
 		writeServer.start();
 
 		// set up root directory of local fs
-		File root = new File(ROOT_FS_PATH);
+		String rootFsPath = System.getProperty("user.home") + FS_PATH;
+		File root = new File(rootFsPath);
 		if (!root.exists()) {
 			root.mkdir();
 		} else if (!root.isDirectory()) {
