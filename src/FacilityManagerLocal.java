@@ -1,5 +1,7 @@
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -27,20 +29,21 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	// constructor used by master
 	public FacilityManagerLocal(Config config) throws IOException {
 		this.config = config;
-		this.fs = new FSImpl(this);
 		id = -1;
+		fs = new FSImpl(this);
+		master = this;
 	}
 
 	// constructor used by slave
 	public FacilityManagerLocal(String masterIp, int id, int port) throws UnknownHostException,
 		IOException, NotBoundException, AlreadyBoundException {
 		this.id = id;
-		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
-		master = (FacilityManager) masterRegistry.lookup(REGISTRY_MASTER_KEY);
 		registry = LocateRegistry.createRegistry(port);
 		registry.bind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
-		this.fs = new FSImpl(this);
-		this.config = master.connect(id);
+		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
+		master = (FacilityManager) masterRegistry.lookup(REGISTRY_MASTER_KEY);
+		config = master.connect(id);
+		fs = new FSImpl(this);
 	}
 
 	public void run() {
@@ -55,7 +58,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 			 *  cmd: upload local-file-path namespace
 			 */
 			if (command.startsWith("upload")) {
-				// Get the filename and namespace.
+				// Get the filename and namespace.xw
 				int fileNameStart = command.indexOf(" ") + 1;
 				int nameSpaceStart = command.lastIndexOf(" ") + 1;
 				File file = new File(command.substring(fileNameStart, nameSpaceStart - 2));
@@ -71,6 +74,11 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 					System.out.println("Error: File does not exist.");
 					System.out.println(PROMPT);
 				}
+			/*
+			 * Exit the system
+			 */
+			} else if (command.startsWith("exit")) {
+				exit();
 			}
 		}
 	}
@@ -109,5 +117,9 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	public void updateFSTable(String namespace, int blockIndex, int nodeId)
 			throws RemoteException {
 		master.updateFSTable(namespace, blockIndex, nodeId);
+	}
+	
+	public void exit() {
+		System.exit(0);
 	}
 }

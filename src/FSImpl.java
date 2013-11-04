@@ -210,6 +210,7 @@ public class FSImpl implements FS {
 	}
 
 	public class Writer extends Thread {
+		
 		private ServerSocket serverSocket;
 
 		public Writer() throws IOException {

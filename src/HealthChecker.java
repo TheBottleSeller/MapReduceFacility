@@ -1,4 +1,5 @@
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -9,7 +10,7 @@ public class HealthChecker extends Thread {
 	private static int HEALTH_CHECK_INTERVAL = 2000; // check every 2 seconds
 	private String[] participantIps;
 	private FacilityManagerMaster master;
-	private volatile Map<Integer, FacilityManager> slaves;
+	private Map<Integer, FacilityManager> slaves;
 	
 	public HealthChecker(FacilityManagerMaster master) {
 		this.master = master;
@@ -28,6 +29,7 @@ public class HealthChecker extends Thread {
 						heartbeat = slaveManager.heartBeat();
 						System.out.println("Recieved heartbeat " + i);
 					} catch (RemoteException e) {
+						e.printStackTrace();
 						heartbeat = false;
 					}
 					
@@ -49,9 +51,8 @@ public class HealthChecker extends Thread {
 	}
 	
 	public synchronized void addConnection(int id, FacilityManager slaveManager) {
-		System.out.println("HEALTH CHECK SLAVE ADDED " + id);
 		slaves.put(id, slaveManager);
-	};
+	}
 	
 	public boolean isHealthy(int id) {
 		return slaves.get(id) != null;
