@@ -7,45 +7,41 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
-public class FacilityManagerMaster extends FacilityManagerLocal implements
-		FacilityManager {
+public class FacilityManagerMaster extends FacilityManagerLocal implements FacilityManager {
 
 	private static String startParticipantScript = "start_participant.sh";
-	
+
 	private int rmiPort;
 	private Map<Integer, FacilityManager> managers;
 	private Map<String, Map<Integer, Set<Integer>>> fsTable;
 	private int currentNode;
 
 	private HealthChecker healthChecker;
-	
-	public FacilityManagerMaster(Config config) throws IOException,
-			AlreadyBoundException, InterruptedException {
+
+	public FacilityManagerMaster(Config config) throws IOException, AlreadyBoundException,
+		InterruptedException {
 		super(config);
 		currentNode = 1;
 		int expectedNumParticipants = config.getParticipantIps().length;
-		managers = Collections
-				.synchronizedMap(new HashMap<Integer, FacilityManager>(expectedNumParticipants));
+		managers = Collections.synchronizedMap(new HashMap<Integer, FacilityManager>(
+			expectedNumParticipants));
 		managers.put(getNodeId(), this);
 		rmiPort = config.getMrPort();
-		
+
 		/* FILESYSTEM INIT */
-		fsTable = Collections
-				.synchronizedMap(new HashMap<String, Map<Integer, Set<Integer>>>());
-		
+		fsTable = Collections.synchronizedMap(new HashMap<String, Map<Integer, Set<Integer>>>());
+
 		Registry r = LocateRegistry.createRegistry(rmiPort);
 		r.bind(REGISTRY_MASTER_KEY, UnicastRemoteObject.exportObject(this, 0));
 		connectParticipants();
-		
+
 		healthChecker = new HealthChecker(this);
 
 		System.out.println("Waiting for slaves to connect...");
@@ -53,7 +49,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 			Thread.sleep(1000);
 		}
 		healthChecker.start();
-		
+
 		System.out.println("All slaves connected.");
 	}
 
@@ -69,8 +65,8 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 			// Execute script.
 			System.out.println("Executing script to start " + slaveIp);
 			String command = "./" + startParticipantScript;
-			ProcessBuilder pb = new ProcessBuilder(command, slaveIp,
-					localAddress, "" + i, "" + rmiPort);
+			ProcessBuilder pb = new ProcessBuilder(command, slaveIp, localAddress, "" + i, ""
+				+ rmiPort);
 			pb.redirectErrorStream(true);
 			pb.directory(null);
 			Process p = pb.start();
@@ -78,37 +74,34 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 			inheritIO(p.getErrorStream(), System.err);
 		}
 	}
-	
+
 	private static void inheritIO(final InputStream src, final PrintStream dest) {
-	    new Thread(new Runnable() {
-	        public void run() {
-	            Scanner sc = new Scanner(src);
-	            while (sc.hasNextLine()) {
-	                dest.println(sc.nextLine());
-	            }
-	        }
-	    }).start();
+		new Thread(new Runnable() {
+			public void run() {
+				Scanner sc = new Scanner(src);
+				while (sc.hasNextLine()) {
+					dest.println(sc.nextLine());
+				}
+			}
+		}).start();
 	}
 
 	@Override
-	public synchronized Map<Integer, Set<Integer>> distributeBlocks(
-			String namespace, int numRecords) throws RemoteException {
+	public synchronized Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numRecords)
+		throws RemoteException {
 		int blockSize = getConfig().getBlockSize();
-		int numBlocks = numRecords / blockSize
-				+ (numRecords % blockSize == 0 ? 0 : 1);
+		int numBlocks = numRecords / blockSize + (numRecords % blockSize == 0 ? 0 : 1);
 		Map<Integer, Set<Integer>> blocksToNodes = new HashMap<Integer, Set<Integer>>();
 		for (int i = 0; i < numBlocks; i++) {
 			for (int j = 0; j < getConfig().getReplicationFactor(); j++) {
 				while (!healthChecker.isHealthy(currentNode)) {
-					currentNode = (currentNode + 1)
-							% (getConfig().getParticipantIps().length);
+					currentNode = (currentNode + 1) % (getConfig().getParticipantIps().length);
 				}
 				blocksToNodes.get(i).add(currentNode);
 				blocksToNodes.put(i, blocksToNodes.get(i));
 			}
 		}
 
-		//fsTable.put(namespace, blocksToNodes);
 		return blocksToNodes;
 	}
 
@@ -117,14 +110,13 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		String slaveIp = getConfig().getParticipantIps()[id];
 		System.out.println("Slave Connected: " + slaveIp);
 		Registry registry = LocateRegistry.getRegistry(slaveIp, rmiPort);
-		FacilityManager slaveManager = (FacilityManager) registry
-				.lookup(REGISTRY_SLAVE_KEY);
+		FacilityManager slaveManager = (FacilityManager) registry.lookup(REGISTRY_SLAVE_KEY);
 		managers.put(id, slaveManager);
 		healthChecker.addConnection(id, slaveManager);
 		System.out.println(slaveManager.heartBeat());
 		return getConfig();
 	}
-	
+
 	@Override
 	public synchronized int redistributeBlock(int nodeId) {
 		if (nodeId == currentNode) {
@@ -132,14 +124,12 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		}
 		return currentNode++;
 	}
-	
+
 	@Override
-	public void updateFSTable(String namespace, int blockIndex, int nodeId)
-			throws RemoteException {
+	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException {
 		Map<Integer, Set<Integer>> blocksToNodes = fsTable.get(namespace);
 		if (blocksToNodes == null) {
-			blocksToNodes = Collections
-					.synchronizedMap(new HashMap<Integer, Set<Integer>>());
+			blocksToNodes = Collections.synchronizedMap(new HashMap<Integer, Set<Integer>>());
 			fsTable.put(namespace, blocksToNodes);
 		}
 		Set<Integer> nodes = blocksToNodes.get(blockIndex);
@@ -149,7 +139,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		}
 		nodes.add(nodeId);
 	}
-	
+
 	@Override
 	public void exit() {
 		for (Integer id : managers.keySet()) {
@@ -165,7 +155,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements
 		System.out.println("Shutting down master...");
 		System.exit(0);
 	}
-	
+
 	public void slaveDied(int id) {
 		managers.remove(id);
 		System.out.println("Slave died " + getParticipantIp(id));

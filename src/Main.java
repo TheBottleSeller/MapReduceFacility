@@ -7,10 +7,11 @@ import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 
 public class Main {
-	
+
 	public static FacilityManager master;
 
-	public static void main(String[] args) throws IOException, NotBoundException, AlreadyBoundException, InterruptedException {
+	public static void main(String[] args) throws IOException, NotBoundException,
+		AlreadyBoundException, InterruptedException {
 		FacilityManagerLocal facilityManager;
 		if (args.length == 2) {
 			// FacilityManager should behaves as the master.
@@ -33,6 +34,7 @@ public class Main {
 			return;
 		}
 	}
+
 	public void createExceptionHandler() {
 		Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
 			@Override

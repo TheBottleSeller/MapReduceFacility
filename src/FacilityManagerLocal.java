@@ -1,7 +1,5 @@
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -54,8 +52,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 			String command = scanner.nextLine();
 			System.out.println(PROMPT);
 			/*
-			 *  upload a file into the distributed file system
-			 *  cmd: upload local-file-path namespace
+			 * upload a file into the distributed file system cmd: upload local-file-path namespace
 			 */
 			if (command.startsWith("upload")) {
 				// Get the filename and namespace.xw
@@ -74,15 +71,15 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 					System.out.println("Error: File does not exist.");
 					System.out.println(PROMPT);
 				}
-			/*
-			 * Exit the system
-			 */
+				/*
+				 * Exit the system
+				 */
 			} else if (command.startsWith("exit")) {
 				exit();
 			}
 		}
 	}
-	
+
 	public Config getConfig() {
 		return config;
 	}
@@ -93,8 +90,8 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public Map<Integer, Set<Integer>> distributeBlocks(String namespace,
-			int numRecords) throws RemoteException {
+	public Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numRecords)
+		throws RemoteException {
 		return master.distributeBlocks(namespace, numRecords);
 	}
 
@@ -102,7 +99,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	public boolean heartBeat() throws RemoteException {
 		return true;
 	}
-	
+
 	@Override
 	public int getNodeId() {
 		return id;
@@ -114,11 +111,10 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public void updateFSTable(String namespace, int blockIndex, int nodeId)
-			throws RemoteException {
+	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException {
 		master.updateFSTable(namespace, blockIndex, nodeId);
 	}
-	
+
 	public void exit() {
 		System.exit(0);
 	}

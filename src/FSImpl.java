@@ -11,7 +11,6 @@ import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -30,8 +29,7 @@ public class FSImpl implements FS {
 	private int blockSize;
 
 	public FSImpl(FacilityManager manager) throws RemoteException {
-		localFiles = Collections
-				.synchronizedMap(new HashMap<String, Set<Integer>>());
+		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
 		this.manager = manager;
 		blockSize = manager.getConfig().getBlockSize();
 
@@ -47,15 +45,14 @@ public class FSImpl implements FS {
 
 	@Override
 	public void upload(File file, String namespace) throws IOException {
-		
 		int totalLines = getNumLines(file);
-		
-		int numBlocks = Math.max(1, (int) Math.ceil(totalLines * 1.0 / manager.getConfig().getBlockSize()));
-		
+		int numBlocks = Math.max(1,
+			(int) Math.ceil(totalLines * 1.0 / manager.getConfig().getBlockSize()));
+
 		try {
-			Map<Integer, Set<Integer>> blockDistribution = manager
-					.distributeBlocks(namespace, totalLines);
-			
+			Map<Integer, Set<Integer>> blockDistribution = manager.distributeBlocks(namespace,
+				totalLines);
+
 			// invert the map to get blockIndex -> nodeId map
 			Map<Integer, Set<Integer>> blockToNodes = new HashMap<Integer, Set<Integer>>();
 			for (int nodeId : blockDistribution.keySet()) {
@@ -68,21 +65,21 @@ public class FSImpl implements FS {
 					nodes.add(nodeId);
 				}
 			}
-			
+
 			BufferedReader reader = new BufferedReader(new FileReader(file));
 			for (int i = 0; i < numBlocks; i++) {
 				Set<Integer> nodes = blockToNodes.get(i);
 				int numNodes = nodes.size();
 				int numReplicated = 0;
 				int numLines = Math.min(blockSize, totalLines - blockSize * i);
-				
+
 				for (int nodeId : nodes) {
 					boolean success = false;
 					int attempts = 0;
 					int maxAttempts = manager.getConfig().getParticipantIps().length;
 					while (attempts < maxAttempts) {
 						// upper bound size of each line to 100 characters
-						reader.mark(blockSize*100);
+						reader.mark(blockSize * 100);
 						if (manager.getNodeId() == nodeId) {
 							success = localWrite(reader, namespace, i, numLines);
 						} else {
@@ -112,8 +109,7 @@ public class FSImpl implements FS {
 		}
 	}
 
-	public boolean localWrite(BufferedReader reader, String namespace,
-			int blockIndex, int numLines) {
+	public boolean localWrite(BufferedReader reader, String namespace, int blockIndex, int numLines) {
 		boolean success = false;
 		File file = new File(createFilePath(namespace, blockIndex));
 		if (file.exists()) {
@@ -139,19 +135,17 @@ public class FSImpl implements FS {
 		return success;
 	}
 
-	public boolean remoteWrite(BufferedReader reader, int nodeId,
-			String namespace, int blockIndex, int numLines) {
+	public boolean remoteWrite(BufferedReader reader, int nodeId, String namespace, int blockIndex,
+		int numLines) {
 		String nodeAddress;
 		boolean success = false;
 		try {
 			nodeAddress = manager.getConfig().getParticipantIps()[nodeId];
 			Socket socket = new Socket(nodeAddress, WRITE_PORT);
 
-			ObjectOutputStream out = new ObjectOutputStream(
-					socket.getOutputStream());
+			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
 			out.flush();
-			ObjectInputStream in = new ObjectInputStream(
-					socket.getInputStream());
+			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
 			out.writeUTF(namespace);
 			out.writeInt(blockIndex);
@@ -210,7 +204,7 @@ public class FSImpl implements FS {
 	}
 
 	public class Writer extends Thread {
-		
+
 		private ServerSocket serverSocket;
 
 		public Writer() throws IOException {
