@@ -1,5 +1,7 @@
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.net.UnknownHostException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -67,7 +69,8 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 				// Upload a file into the DFS OR perform mapreduce.
 				int fileNameStart = command.indexOf(" ") + 1;
 				int nameSpaceStart = command.lastIndexOf(" ") + 1;
-				File file = new File(command.substring(fileNameStart, nameSpaceStart - 1));
+				String classPath = command.substring(fileNameStart, nameSpaceStart - 1);
+				File file = new File(classPath);
 				System.out.println(file.toString());
 				if (file.exists()) {
 					String namespace = command.substring(nameSpaceStart);
@@ -75,10 +78,21 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 						if (command.startsWith("upload")) {
 							fs.upload(file, namespace);
 						} else {
-							fs.mapreduce(file.getClass(), namespace);
+							System.out.println(fs.getRoot()); 
+							URL classURL = new URL("file://" + fs.getRoot() + "/");
+							System.out.println(classURL.toString());
+							URL[] classes = { classURL };
+							URLClassLoader ucl = new URLClassLoader(classes);
+							String className = classPath.substring(0, classPath.lastIndexOf('.'));
+							System.out.println(className);
+							Class<?> clazz = ucl.loadClass(className);
+							fs.mapreduce(clazz.getResourceAsStream(clazz.getName() + ".class"), namespace);
 						}
 					} catch (IOException e) {
 						System.out.println("There was an error uploading the file!");
+						e.printStackTrace();
+					} catch (ClassNotFoundException e) {
+						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				} else {

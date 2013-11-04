@@ -48,7 +48,7 @@ public class FSImpl implements FS {
 		createRootDirectory(CLASS_PATH);
 	}
 
-	private String getRoot() {
+	public String getRoot() {
 		return System.getProperty("user.home");
 	}
 
@@ -137,9 +137,9 @@ public class FSImpl implements FS {
 	}	
 	
 	@Override
-	public void mapreduce(Class<?> clazz, String namespace) throws IOException {
+	public void mapreduce(InputStream is, String namespace) throws IOException {
 		try {
-			remoteWriteClass(clazz, manager.getNodeId()); 
+			remoteWriteClass(is, namespace, manager.getNodeId()); 
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -203,8 +203,7 @@ public class FSImpl implements FS {
 		return success;
 	}
 
-	public boolean remoteWriteClass(Class<?> clazz, int nodeId) {
-		InputStream is = clazz.getResourceAsStream(clazz.getName());
+	public boolean remoteWriteClass(InputStream is, String namespace, int nodeId) {
 		boolean success = false;
 		String nodeAddress;
 		try {
@@ -216,15 +215,17 @@ public class FSImpl implements FS {
 			out.flush();
 
 			out.writeObject(Messages.WRITE_CLASS);
-			out.writeUTF(clazz.getName());
+			out.writeUTF(namespace);
 
 			try {
 				byte[] c = new byte[1024];
-				while (is.read(c) != -1) {
+				int numBytes = 0;
+				while ((numBytes = is.read(c)) != -1) {
+					out.writeInt(numBytes);
 					out.write(c);
 					out.flush();
 				}
-				out.write(null);
+				out.writeInt(numBytes);
 				out.flush();
 
 				success = in.readBoolean();
@@ -369,12 +370,10 @@ public class FSImpl implements FS {
 					file.createNewFile();
 					FileOutputStream fos = new FileOutputStream(file);
 					BufferedOutputStream bos = new BufferedOutputStream(fos);
-					byte[] c = new byte[1024];
-					while (true) {
+					int numBytes = 0;
+					while ((numBytes = in.readInt()) != -1) {
+						byte[] c = new byte[numBytes];
 						in.read(c);
-						if (c == null) {
-							break;
-						}
 						bos.write(c);
 					}
 					bos.close();
