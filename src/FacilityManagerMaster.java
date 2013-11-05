@@ -177,8 +177,8 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 	public void loadClassObjects(Class<?> clazz) throws RemoteException {
 		try {
 			Container c = (Container) clazz.newInstance();
-			Mapper440 mapper = c.getMapper();
-			Reducer440 reducer = c.getReducer();
+			Container.Mapper440<?, ?, ?, ?> mapper = c.getMapper();
+			Container.Reducer440<?, ?, ?, ?> reducer = c.getReducer();
 			System.out.println("mapper = " + mapper);
 			System.out.println("reducer = " + reducer);
 		} catch (InstantiationException e) {
