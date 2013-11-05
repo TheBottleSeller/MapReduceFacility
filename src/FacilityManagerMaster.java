@@ -175,14 +175,15 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 
 	@Override
 	public void loadClassObjects(Class<?> clazz) throws RemoteException {
-		Class<?> mapper;
-		Class<?> reducer;
 		try {
-			mapper = Class.forName(clazz.getName());
-			reducer = Class.forName(clazz.getName() + ".Reducer.class");
-			System.out.println(mapper.getInterfaces());
-			System.out.println(reducer.getInterfaces());
-		} catch (ClassNotFoundException e) {
+			Container c = (Container) clazz.newInstance();
+			Mapper440 mapper = c.getMapper();
+			Reducer440 reducer = c.getReducer();
+			System.out.println("mapper = " + mapper);
+			System.out.println("reducer = " + reducer);
+		} catch (InstantiationException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
 			e.printStackTrace();
 		}
 	}

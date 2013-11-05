@@ -216,10 +216,8 @@ public class FSImpl implements FS {
 					out.writeInt(numBytes);
 					out.write(c);
 					out.flush();
-					System.out.println("writing " + numBytes);
 				}
 				out.writeInt(numBytes);
-				System.out.println("writing " + numBytes);
 				out.flush();
 
 				success = in.readBoolean();
@@ -371,7 +369,6 @@ public class FSImpl implements FS {
 						byte[] c = new byte[numBytes];
 						in.read(c);
 						bos.write(c);
-						System.out.println("reading " + numBytes);
 					}
 					bos.close();
 					return true;

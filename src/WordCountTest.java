@@ -1,8 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 
-
-public class WordCountTest {
+public class WordCountTest implements Container {
 
 	public class Mapper extends Mapper440<Integer, String, String, Integer> {
 
@@ -17,12 +16,11 @@ public class WordCountTest {
 			return intermediateValues;
 		}
 	}
-	
+
 	public class Reducer extends Reducer440<String, Integer, String, Integer> {
 
 		@Override
-		public KVPair<String, Integer> reduce(
-				KVPair<String, List<Integer>> input) {
+		public KVPair<String, Integer> reduce(KVPair<String, List<Integer>> input) {
 			String word = input.getKey();
 			List<Integer> counts = input.getValue();
 			int total = 0;
@@ -31,6 +29,16 @@ public class WordCountTest {
 			}
 			return new KVPair<String, Integer>(word, total);
 		}
-		
+
+	}
+
+	@Override
+	public Mapper440<?, ?, ?, ?> getMapper() {
+		return new Mapper();
+	}
+
+	@Override
+	public Reducer440<?, ?, ?, ?> getReducer() {
+		return new Reducer();
 	}
 }
