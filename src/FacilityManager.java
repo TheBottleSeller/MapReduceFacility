@@ -21,4 +21,6 @@ public interface FacilityManager extends Remote {
 	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException;
 	
 	public void exit() throws RemoteException;
+
+	public void loadClassObjects(Class<?> clazz) throws RemoteException;
 }

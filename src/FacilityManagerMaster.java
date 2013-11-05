@@ -107,7 +107,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 
 		return blocksToNodes;
 	}
-	
+
 	public void incrementCurrentNode() {
 		currentNode = (currentNode + 1) % (getConfig().getParticipantIps().length);
 	}
@@ -171,5 +171,19 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 
 	public String getParticipantIp(int id) {
 		return getConfig().getParticipantIps()[id];
+	}
+
+	@Override
+	public void loadClassObjects(Class<?> clazz) throws RemoteException {
+		Class<?> mapper;
+		Class<?> reducer;
+		try {
+			mapper = Class.forName(clazz.getName());
+			reducer = Class.forName(clazz.getName() + ".Reducer.class");
+			System.out.println(mapper.getInterfaces());
+			System.out.println(reducer.getInterfaces());
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		}
 	}
 }

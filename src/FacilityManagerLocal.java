@@ -26,7 +26,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	private Registry masterRegistry;
 	private Registry registry;
 
-	// constructor used by master
+	// Constructor used by master.
 	public FacilityManagerLocal(Config config) throws IOException {
 		this.config = config;
 		fs = new FSImpl(this);
@@ -40,7 +40,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 		}
 	}
 
-	// constructor used by slave
+	// Constructor used by a slave.
 	public FacilityManagerLocal(String masterIp, int id, int port) throws UnknownHostException,
 		IOException, NotBoundException, AlreadyBoundException {
 		this.id = id;
@@ -59,48 +59,44 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 		while (scanner.hasNextLine()) {
 			String command = scanner.nextLine();
 			System.out.println(PROMPT);
-			if (command.equals("-h")) {
-				System.out
-					.println("Commands:\n"
-						+ "-h\tprint the list of commands\n"
-						+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
-						+ "mapreduce <class file> <input file namespace>\trun the specified mapreduce.");
-			} else if (command.startsWith("upload") || command.startsWith("mapreduce")) {
+			if (command.startsWith("upload") || command.startsWith("mapreduce")) {
 				// Upload a file into the DFS OR perform mapreduce.
 				int fileNameStart = command.indexOf(" ") + 1;
 				int nameSpaceStart = command.lastIndexOf(" ") + 1;
-				String classPath = command.substring(fileNameStart, nameSpaceStart - 1);
-				File file = new File(classPath);
-				System.out.println(file.toString());
+				String fileName = command.substring(fileNameStart, nameSpaceStart - 1);
+				File file = new File(fileName);
 				if (file.exists()) {
 					String namespace = command.substring(nameSpaceStart);
 					try {
 						if (command.startsWith("upload")) {
 							fs.upload(file, namespace);
 						} else {
-							System.out.println(fs.getRoot()); 
-							URL classURL = new URL("file://" + fs.getRoot() + "/");
-							System.out.println(classURL.toString());
-							URL[] classes = { classURL };
-							URLClassLoader ucl = new URLClassLoader(classes);
-							String className = classPath.substring(0, classPath.lastIndexOf('.'));
-							System.out.println(className);
-							Class<?> clazz = ucl.loadClass(className);
-							fs.mapreduce(clazz.getResourceAsStream(clazz.getName() + ".class"), namespace);
+							URLClassLoader ucl = new URLClassLoader(new URL[] { new URL("file://"
+								+ fs.getRoot()) });
+							Class<?> clazz = ucl.loadClass(fileName.substring(0,
+								fileName.indexOf('.')));
+							fs.remoteWriteClass(clazz.getResourceAsStream(fileName), namespace,
+								master.getNodeId());
+							master.loadClassObjects(clazz);
 						}
 					} catch (IOException e) {
 						System.out.println("There was an error uploading the file!");
 						e.printStackTrace();
 					} catch (ClassNotFoundException e) {
-						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
 				} else {
 					System.out.println("Error: File does not exist.");
 					System.out.println(PROMPT);
 				}
-			} else if (command.equals("exit")) { // Exit the system.
+			} else if (command.equals("exit")) {
+				// Exit the system.
 				exit();
+			} else {
+				System.out
+					.println("Commands:\n"
+						+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
+						+ "mapreduce <class-filename> <input-file-namespace>\trun the specified mapreduce.");
 			}
 		}
 	}
@@ -142,5 +138,10 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 
 	public void exit() {
 		System.exit(0);
+	}
+
+	@Override
+	public void loadClassObjects(Class<?> clazz) throws RemoteException {
+		// TODO Auto-generated method stub
 	}
 }

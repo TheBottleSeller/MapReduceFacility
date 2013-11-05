@@ -21,8 +21,8 @@ import java.util.Set;
 
 public class FSImpl implements FS {
 
-	private static final String DATA_PATH = "/data440/";
-	private static final String CLASS_PATH = "/class440/";
+	private static final String DATA_PATH = "data440/";
+	private static final String CLASS_PATH = "class440/";
 
 	private static int WRITE_PORT = 8083;
 	private static int READ_PORT = 8084;
@@ -49,7 +49,7 @@ public class FSImpl implements FS {
 	}
 
 	public String getRoot() {
-		return System.getProperty("user.home");
+		return System.getProperty("user.home") + "/";
 	}
 
 	private void createRootDirectory(String path) {
@@ -134,18 +134,10 @@ public class FSImpl implements FS {
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
-	}	
-	
-	@Override
-	public void mapreduce(InputStream is, String namespace) throws IOException {
-		try {
-			remoteWriteClass(is, namespace, manager.getNodeId()); 
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		}
 	}
 
-	public boolean localWriteData(BufferedReader reader, String namespace, int blockIndex, int numLines) {
+	public boolean localWriteData(BufferedReader reader, String namespace, int blockIndex,
+		int numLines) {
 		boolean success = false;
 		File file = new File(createDataFilePath(namespace, blockIndex));
 		if (file.exists()) {
@@ -211,8 +203,8 @@ public class FSImpl implements FS {
 			Socket socket = new Socket(nodeAddress, WRITE_PORT);
 
 			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 			out.flush();
+			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
 			out.writeObject(Messages.WRITE_CLASS);
 			out.writeUTF(namespace);
@@ -220,12 +212,14 @@ public class FSImpl implements FS {
 			try {
 				byte[] c = new byte[1024];
 				int numBytes = 0;
-				while ((numBytes = is.read(c)) != -1) {
+				while ((numBytes = is.read(c)) > 0) {
 					out.writeInt(numBytes);
 					out.write(c);
 					out.flush();
+					System.out.println("writing " + numBytes);
 				}
 				out.writeInt(numBytes);
+				System.out.println("writing " + numBytes);
 				out.flush();
 
 				success = in.readBoolean();
@@ -261,11 +255,11 @@ public class FSImpl implements FS {
 		try {
 			byte[] c = new byte[1024];
 			int count = 0;
-			int readChars = 0;
+			int numBytes = 0;
 			boolean empty = true;
-			while ((readChars = is.read(c)) != -1) {
+			while ((numBytes = is.read(c)) != -1) {
 				empty = false;
-				for (int i = 0; i < readChars; i++) {
+				for (int i = 0; i < numBytes; i++) {
 					if (c[i] == '\n') {
 						count++;
 					}
@@ -312,12 +306,14 @@ public class FSImpl implements FS {
 					out = new ObjectOutputStream(socket.getOutputStream());
 					in = new ObjectInputStream(socket.getInputStream());
 
-					if (in.readUTF().equals(Messages.WRITE_DATA)) {
+					if (in.readObject().equals(Messages.WRITE_DATA)) {
 						success = readDataFile(in);
 					} else { // Write class.
 						success = readClassFile(in);
 					}
 				} catch (IOException e) {
+					e.printStackTrace();
+				} catch (ClassNotFoundException e) {
 					e.printStackTrace();
 				}
 
@@ -371,10 +367,11 @@ public class FSImpl implements FS {
 					FileOutputStream fos = new FileOutputStream(file);
 					BufferedOutputStream bos = new BufferedOutputStream(fos);
 					int numBytes = 0;
-					while ((numBytes = in.readInt()) != -1) {
+					while ((numBytes = in.readInt()) > 0) {
 						byte[] c = new byte[numBytes];
 						in.read(c);
 						bos.write(c);
+						System.out.println("reading " + numBytes);
 					}
 					bos.close();
 					return true;
