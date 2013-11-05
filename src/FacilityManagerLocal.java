@@ -20,7 +20,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	protected static String REGISTRY_SLAVE_KEY = "SLAVE_HEALTH";
 
 	private int id;
-	private FSImpl fs;
+	private FS fs;
 	private Config config;
 	private FacilityManager master;
 	private Registry masterRegistry;
@@ -29,7 +29,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	// Constructor used by master.
 	public FacilityManagerLocal(Config config) throws IOException {
 		this.config = config;
-		fs = new FSImpl(this);
+		fs = new FS(this);
 		master = this;
 		String[] participants = config.getParticipantIps();
 		for (int i = 0; i < participants.length; i++) {
@@ -49,7 +49,7 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
 		master = (FacilityManager) masterRegistry.lookup(REGISTRY_MASTER_KEY);
 		config = master.connect(id);
-		fs = new FSImpl(this);
+		fs = new FS(this);
 	}
 
 	public void run() {
