@@ -1,31 +1,21 @@
-import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
-import java.util.Map;
 import java.util.Set;
 
 public interface FacilityManager extends Remote {
 
-	public Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numBlocks)
-		throws RemoteException;
-
 	public Config getConfig() throws RemoteException;
-
-	public Config connect(int id) throws RemoteException, NotBoundException;
 
 	public boolean heartBeat() throws RemoteException;
 
-	public int getNodeId() throws RemoteException;
-
-	public int redistributeBlock(int nodeId) throws RemoteException;
-
-	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException;
+	public int getNodeId();
 
 	public void exit() throws RemoteException;
-	
-	public boolean hasDistributedFile(String filename) throws RemoteException;
-	
-	public Job dispatchJob(Class<?> clazz, String filename) throws RemoteException;
-	
-	public boolean runMapJob(int jobId, String filename, int blockIndex) throws RemoteException;
+
+	public boolean runMapJob(int jobId, String filename, int blockIndex, Class<?> clazz)
+		throws RemoteException;
+
+	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId)
+		throws RemoteException;
+
 }

@@ -10,9 +10,9 @@ public class HealthChecker extends Thread {
 	private FacilityManagerMaster master;
 	private Map<Integer, FacilityManager> slaves;
 
-	public HealthChecker(FacilityManagerMaster master) {
+	public HealthChecker(FacilityManagerMaster master, String[] participantIds) {
 		this.master = master;
-		this.participantIps = master.getConfig().getParticipantIps();
+		this.participantIps = participantIds;
 		slaves = Collections.synchronizedMap(new HashMap<Integer, FacilityManager>());
 	}
 

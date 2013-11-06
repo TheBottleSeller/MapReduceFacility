@@ -1,6 +1,4 @@
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
+import java.rmi.RemoteException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -8,21 +6,36 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class JobScheduler {
 	
-	private FacilityManagerMaster master;
-	private Map<Integer, AtomicInteger> activeMaps;
-	private Map<Integer, AtomicInteger> activeReduces;
+	private Map<Integer, FacilityManager> managers;
+	private AtomicInteger[] activeMaps;
+	private AtomicInteger[] activeReduces;
 	private AtomicInteger totalJobs;
 	
-	public JobScheduler(FacilityManagerMaster master) {
-		this.master = master;
-		activeMaps = Collections.synchronizedMap(new HashMap<Integer, AtomicInteger>());
-		activeReduces = Collections.synchronizedMap(new HashMap<Integer, AtomicInteger>());
-		int numParticipants = master.getConfig().getParticipantIps().length;
+	public JobScheduler(Map<Integer, FacilityManager> managers, int numParticipants) {
+		this.managers = managers;
+		activeMaps = new AtomicInteger[numParticipants];
+		activeReduces = new AtomicInteger[numParticipants];
 		for (int i = 0; i < numParticipants; i++) {
-			activeMaps.put(i, new AtomicInteger(0));
-			activeReduces.put(i, new AtomicInteger(0));
+			activeMaps[i] = new AtomicInteger(0);
+			activeReduces[i] = new AtomicInteger(0);
 		}
 		totalJobs = new AtomicInteger(0);
+	}
+	
+	public synchronized int getNumMappers(int nodeId) {
+		return activeMaps[nodeId].get();
+	}
+	
+	public synchronized int getNumReducers(int nodeId) {
+		return activeReduces[nodeId].get();
+	}
+	
+	public synchronized void incrementActiveMaps(int nodeId) {
+		activeMaps[nodeId].incrementAndGet();
+	}
+	
+	public synchronized void incrementActiveReduces(int nodeId) {
+		activeReduces[nodeId].incrementAndGet();
 	}
 	
 	public List<Job> issueJob(Class<?> clazz, String inputFile, Map<Integer, Set<Integer>> blockLocations) {
@@ -33,32 +46,29 @@ public class JobScheduler {
 			int minWork = Integer.MAX_VALUE;
 			int minWorker = -1;
 			for (int nodeId : nodeIds) { 
-				int work = activeMaps.get(nodeId).get() + activeReduces.get(nodeId).get();
+				int work = getNumMappers(nodeId) + getNumReducers(nodeId);
 				if (work < minWork) {
 					minWork = work;
 					minWorker = nodeId;
 				}
 			}
 			job.addMapper(minWorker, blockIndex);
-			activeMaps.get(minWorker).incrementAndGet();
+			incrementActiveMaps(minWorker);
 		}
 		
 		Map<Integer, Integer> mappers = job.getMappers();
 		for (Integer nodeId : mappers.keySet()) {
 			int blockIndex = mappers.get(nodeId);
-			// need to know send the map job to each associated node
-			// with the filename, block index, and job id
-		}
-		try {
-			MapReduce440 c = (MapReduce440) clazz.newInstance();
-			//Mapper440 mapper = c.getMapper();
-			//Reducer440 reducer = c.getReducer();
-			//System.out.println("mapper = " + mapper);
-			//System.out.println("reducer = " + reducer);
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
+			FacilityManager manager = managers.get(nodeId);
+			boolean success = false;
+			try {
+				success = manager.runMapJob(jobId, inputFile, blockIndex, clazz);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+			if (!success) {
+				// TODO: What happens here..?
+			}
 		}
 		return null;
 	}

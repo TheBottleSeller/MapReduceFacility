@@ -29,6 +29,7 @@ public class FS {
 
 	private Map<String, Set<Integer>> localFiles;
 	private FacilityManager manager;
+	private FacilityManagerMaster master;
 	private int blockSize;
 	private WriteServer writeServer;
 
@@ -36,9 +37,10 @@ public class FS {
 		WRITE_DATA, WRITE_CLASS;
 	}
 
-	public FS(FacilityManager manager) throws IOException {
+	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
 		this.manager = manager;
+		this.master = master;
 		blockSize = manager.getConfig().getBlockSize();
 		writeServer = new WriteServer();
 		writeServer.start();
@@ -68,7 +70,7 @@ public class FS {
 			(int) Math.ceil(totalLines * 1.0 / manager.getConfig().getBlockSize()));
 
 		try {
-			Map<Integer, Set<Integer>> blockDistribution = manager.distributeBlocks(namespace,
+			Map<Integer, Set<Integer>> blockDistribution = master.distributeBlocks(namespace,
 				numBlocks);
 
 			for (Integer nodeId : blockDistribution.keySet()) {
@@ -115,17 +117,17 @@ public class FS {
 							reader.reset();
 						}
 						if (!success) {
-							nodeId = manager.redistributeBlock(nodeId);
+							nodeId = master.redistributeBlock(nodeId);
 							attempts++;
 						} else {
-							manager.updateFSTable(namespace, i, nodeId);
+							master.updateFSTable(namespace, i, nodeId);
 							break;
 						}
 					}
 					if (success) {
 						numReplicated++;
 					} else {
-						System.out.println("Could not upload file. No participants responding");
+						System.out.println("Could not upload file. No participants responding.");
 					}
 				}
 			}
@@ -240,8 +242,17 @@ public class FS {
 		}
 	}
 
-	public File getFile() {
-		return null;
+	public File getFileBlock(String filename, int blockIndex) {
+		return new File(createDataFilePath(filename, blockIndex));
+	}
+	
+	public File getTempFileBlock(String filename, int blockIndex, int jobId) throws IOException {
+		File temp = new File(createTempDataFilePath(filename, blockIndex, jobId));
+		if (temp.exists()) {
+			temp.delete();
+		}
+		temp.createNewFile();
+		return temp;
 	}
 
 	private int getNumLines(File file) throws IOException {
@@ -302,7 +313,7 @@ public class FS {
 
 					if (in.readObject().equals(Messages.WRITE_DATA)) {
 						success = readDataFile(in);
-					} else { // Write class.
+					} else {
 						success = readClassFile(in);
 					}
 				} catch (IOException e) {
@@ -377,16 +388,22 @@ public class FS {
 	}
 
 	public class Reader {
+		
 		public Reader() {
-
+			
 		}
+		
 	}
 
-	public String createDataFilePath(String namespace, int blockIndex) {
-		return getRoot() + DATA_PATH + namespace + "-" + blockIndex + ".pt";
+	public String createDataFilePath(String filename, int blockIndex) {
+		return String.format("%s%s%s-%d.pt", getRoot(), DATA_PATH, filename, blockIndex);
+	}
+	
+	public String createTempDataFilePath(String filename, int jobId, int blockIndex) {
+		return String.format("%s%s%s-jobId-%d-%d.tmp", getRoot(), DATA_PATH, filename, jobId, blockIndex);
 	}
 
-	public String createClassFilePath(String namespace) {
-		return getRoot() + CLASS_PATH + namespace + ".class";
+	public String createClassFilePath(String filename) {
+		return String.format("%s%s%s.class", getRoot(), CLASS_PATH, filename);
 	}
 }

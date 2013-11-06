@@ -4,7 +4,6 @@ import java.util.Map;
 public class Job {
 
 	private int id;
-	private int blockIndex;
 	private String filename;
 	private Map<Integer, Integer> mappers;
 
