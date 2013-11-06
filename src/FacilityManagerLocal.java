@@ -199,4 +199,11 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	public boolean hasDistributedFile(String filename) throws RemoteException {
 		throw new RemoteException();
 	}
+
+	@Override
+	public boolean runMapJob(int jobId, String filename, int blockIndex)
+			throws RemoteException {
+		// TODO TODODODOD
+		return false;
+	}
 }

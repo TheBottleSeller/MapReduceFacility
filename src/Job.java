@@ -1,27 +1,33 @@
+import java.util.HashMap;
+import java.util.Map;
+
 public class Job {
 
-	public enum JobType {
-		MAP, REDUCE
-	};
-
 	private int id;
-	private JobType jobType;
+	private int blockIndex;
+	private String filename;
+	private Map<Integer, Integer> mappers;
 
-	public Job(int id, JobType jobType) {
+	public Job(int id, String filename) {
 		this.id = id;
-		this.jobType = jobType;
+		this.filename = filename;
+		mappers = new HashMap<Integer, Integer>();
 	}
-
-	public JobType getJobType() {
-		return jobType;
+	
+	public void addMapper(int nodeId, int blockIndex) {
+		mappers.put(nodeId, blockIndex);
 	}
-
+	
+	public Map<Integer, Integer> getMappers() {
+		return mappers;
+	}
+	
 	public int getId() {
 		return id;
 	}
 	
 	@Override
 	public String toString() {
-		return String.format("id=%d %s", id, jobType == JobType.MAP ? "MAP" : "REDUCE");
+		return String.format("id=%d file=%s", id, filename);
 	}
 }

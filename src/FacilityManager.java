@@ -26,4 +26,6 @@ public interface FacilityManager extends Remote {
 	public boolean hasDistributedFile(String filename) throws RemoteException;
 	
 	public Job dispatchJob(Class<?> clazz, String filename) throws RemoteException;
+	
+	public boolean runMapJob(int jobId, String filename, int blockIndex) throws RemoteException;
 }

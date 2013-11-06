@@ -181,7 +181,8 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 		if (blockLocations == null) {
 			return null;
 		}
-		return scheduler.issueJob(clazz, blockLocations);
+		scheduler.issueJob(clazz, filename, blockLocations);
+		return null;
 	}
 	
 	@Override
