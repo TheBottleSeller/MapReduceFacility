@@ -20,7 +20,7 @@ public class Main {
 			master = facilityManager;
 			facilityManager.run();
 		} else if (args.length == 4) {
-			// FacilityManager should behave as a slave.
+			// FacilityManager should behave as a participant.
 			String masterIp = args[1];
 			int id = Integer.parseInt(args[2]);
 			int port = Integer.parseInt(args[3]);

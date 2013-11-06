@@ -1,4 +1,3 @@
-
 public class KVPair<K,V> {
 	private K key;
 	private V value;

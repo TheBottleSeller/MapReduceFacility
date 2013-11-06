@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import MapReduce440.Mapper440;
+import MapReduce440.Reducer440;
+
 
 public class JobScheduler {
 	
@@ -20,8 +23,8 @@ public class JobScheduler {
 	public Job issueJob(Class<?> clazz, Map<Integer, Set<Integer>> blockLocations) {
 		try {
 			MapReduce440 c = (MapReduce440) clazz.newInstance();
-			Mapper440 mapper = c.getMapper();
-			Reducer440 reducer = c.getReducer();
+			//Mapper440 mapper = c.getMapper();
+			//Reducer440 reducer = c.getReducer();
 			System.out.println("mapper = " + mapper);
 			System.out.println("reducer = " + reducer);
 		} catch (InstantiationException e) {
