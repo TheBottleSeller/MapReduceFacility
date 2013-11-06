@@ -21,7 +21,7 @@ public interface FacilityManagerMaster extends FacilityManager, Remote {
 
 	public void mapFinished(int nodeId, int jobId, int blockIndex) throws RemoteException;
 
-	public void combineFinished(int nodeId, int jobId, int blockIndex) throws RemoteException;
+	public void combineFinished(int jobId, int nodeId, int blockIndex) throws RemoteException;
 
 	public void slaveDied(int nodeId);
 }

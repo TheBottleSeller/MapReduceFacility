@@ -4,46 +4,47 @@ import java.util.List;
 
 public class WordCountTest extends MapReduce440 {
 
-	public class Mapper extends MapReduce440.Mapper440<Integer, String, String, Integer> {
+	public class Mapper extends Mapper440<Integer, String, String, Integer> {
 
-		public Mapper(File inBlock, File outBlock) {
-			super(inBlock, outBlock);
+		public Mapper(FacilityManagerMaster master, File inBlock, File outBlock, int jobId,
+			int nodeId, int blockIndex) {
+			super(master, inBlock, outBlock, jobId, nodeId, blockIndex);
 		}
 
 		@Override
-		public List<MapReduce440.KVPair<String, Integer>> map(
-			MapReduce440.KVPair<Integer, String> input) {
+		public List<KVPair<String, Integer>> map(KVPair<Integer, String> input) {
 			String line = input.getValue();
 			String[] words = line.split(" ");
-			List<MapReduce440.KVPair<String, Integer>> tempValues = new ArrayList<MapReduce440.KVPair<String, Integer>>();
+			List<KVPair<String, Integer>> tempValues = new ArrayList<KVPair<String, Integer>>();
 			for (String word : words) {
-				tempValues.add(new MapReduce440.KVPair<String, Integer>(word, 1));
+				tempValues.add(new KVPair<String, Integer>(word, 1));
 			}
 			return tempValues;
 		}
 	}
 
-	public class Reducer extends MapReduce440.Reducer440<String, Integer, String, Integer> {
+	public class Reducer extends Reducer440<String, Integer, String, Integer> {
 
 		@Override
-		public MapReduce440.KVPair<String, Integer> reduce(
-			MapReduce440.KVPair<String, List<Integer>> input) {
+		public KVPair<String, Integer> reduce(KVPair<String, List<Integer>> input) {
 			String word = input.getKey();
 			List<Integer> counts = input.getValue();
 			int total = 0;
 			for (int c : counts) {
 				total += c;
 			}
-			return new MapReduce440.KVPair<String, Integer>(word, total);
+			return new KVPair<String, Integer>(word, total);
 		}
 
 	}
 
-	public MapReduce440.Mapper440<?, ?, ?, ?> createMapper(File inBlock, File outBlock) {
-		return new Mapper(inBlock, outBlock);
+	@Override
+	public Mapper440<?, ?, ?, ?> createMapper(FacilityManagerMaster master, File inBlock,
+		File outBlock, int jobId, int nodeId, int blockIndex) {
+		return new Mapper(master, inBlock, outBlock, jobId, nodeId, blockIndex);
 	}
 
-	public MapReduce440.Reducer440<?, ?, ?, ?> createReducer() {
+	public Reducer440<?, ?, ?, ?> createReducer() {
 		return new Reducer();
 	}
 }

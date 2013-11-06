@@ -5,24 +5,39 @@ public class Job {
 
 	private int id;
 	private String filename;
-	private Map<Integer, Integer> mappers;
+	private int numBlocks;
+	private int[] mappers;
+	private int completedMaps;
+	private int completedReduces;
 
-	public Job(int id, String filename) {
+	public Job(int id, String filename, int numBlocks) {
 		this.id = id;
 		this.filename = filename;
-		mappers = new HashMap<Integer, Integer>();
+		this.numBlocks = numBlocks;
+		mappers = new int[numBlocks];
+		completedMaps = 0;
+		completedReduces = 0;
 	}
 	
-	public void addMapper(int nodeId, int blockIndex) {
-		mappers.put(nodeId, blockIndex);
+	public synchronized void addMapper(int nodeId, int blockIndex) {
+		mappers[blockIndex] = nodeId;
 	}
 	
-	public Map<Integer, Integer> getMappers() {
-		return mappers;
+	public int getMapper(int blockIndex) {
+		return mappers[blockIndex];
+	}
+	
+	public synchronized boolean mapFinished() {
+		completedMaps++;
+		return completedMaps == numBlocks;
 	}
 	
 	public int getId() {
 		return id;
+	}
+	
+	public int getNumBlocks() {
+		return numBlocks;
 	}
 	
 	@Override
