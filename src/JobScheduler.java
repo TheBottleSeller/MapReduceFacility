@@ -25,8 +25,8 @@ public class JobScheduler {
 			MapReduce440 c = (MapReduce440) clazz.newInstance();
 			//Mapper440 mapper = c.getMapper();
 			//Reducer440 reducer = c.getReducer();
-			System.out.println("mapper = " + mapper);
-			System.out.println("reducer = " + reducer);
+			//System.out.println("mapper = " + mapper);
+			//System.out.println("reducer = " + reducer);
 		} catch (InstantiationException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {

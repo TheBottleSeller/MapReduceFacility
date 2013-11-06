@@ -194,11 +194,9 @@ public class FS {
 		return success;
 	}
 
-	public boolean remoteWriteClass(InputStream is, String namespace, int nodeId) {
+	public boolean remoteWriteClass(InputStream is, String namespace, String nodeAddress) {
 		boolean success = false;
-		String nodeAddress;
 		try {
-			nodeAddress = manager.getConfig().getParticipantIps()[nodeId];
 			Socket socket = new Socket(nodeAddress, WRITE_PORT);
 
 			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
