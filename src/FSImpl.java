@@ -195,11 +195,9 @@ public class FSImpl implements FS {
 		return success;
 	}
 
-	public boolean remoteWriteClass(InputStream is, String namespace, int nodeId) {
+	public boolean remoteWriteClass(InputStream is, String namespace, String nodeAddress) {
 		boolean success = false;
-		String nodeAddress;
 		try {
-			nodeAddress = manager.getConfig().getParticipantIps()[nodeId];
 			Socket socket = new Socket(nodeAddress, WRITE_PORT);
 
 			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
@@ -214,8 +212,7 @@ public class FSImpl implements FS {
 				int numBytes = 0;
 				while ((numBytes = is.read(c)) > 0) {
 					out.writeInt(numBytes);
-					out.write(c);
-					out.flush();
+					out.write(c, 0, numBytes);
 				}
 				out.writeInt(numBytes);
 				out.flush();

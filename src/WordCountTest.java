@@ -1,7 +1,7 @@
 import java.util.ArrayList;
 import java.util.List;
 
-public class WordCountTest implements Container {
+public class WordCountTest implements MapReduce440 {
 
 	public class Mapper extends Mapper440<Integer, String, String, Integer> {
 

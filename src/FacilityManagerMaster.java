@@ -24,6 +24,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 	private int currentNode;
 
 	private HealthChecker healthChecker;
+	private JobScheduler scheduler;
 
 	public FacilityManagerMaster(Config config) throws IOException, AlreadyBoundException,
 		InterruptedException {
@@ -43,6 +44,7 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 		connectParticipants();
 
 		healthChecker = new HealthChecker(this);
+		scheduler = new JobScheduler(this);
 
 		System.out.println("Waiting for slaves to connect...");
 		while (managers.size() != expectedNumParticipants) {
@@ -174,17 +176,16 @@ public class FacilityManagerMaster extends FacilityManagerLocal implements Facil
 	}
 
 	@Override
-	public void loadClassObjects(Class<?> clazz) throws RemoteException {
-		try {
-			Container c = (Container) clazz.newInstance();
-			Mapper440 mapper = c.getMapper();
-			Reducer440 reducer = c.getReducer();
-			System.out.println("mapper = " + mapper);
-			System.out.println("reducer = " + reducer);
-		} catch (InstantiationException e) {
-			e.printStackTrace();
-		} catch (IllegalAccessException e) {
-			e.printStackTrace();
+	public Job dispatchJob(Class<?> clazz, String filename) throws RemoteException {
+		Map<Integer,Set<Integer>> blockLocations = fsTable.get(filename);
+		if (blockLocations == null) {
+			return null;
 		}
+		return scheduler.issueJob(clazz, blockLocations);
+	}
+	
+	@Override
+	public boolean hasDistributedFile(String filename) throws RemoteException {
+		return fsTable.containsKey(filename);
 	}
 }

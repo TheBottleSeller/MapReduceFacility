@@ -1,5 +1,6 @@
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.net.UnknownHostException;
@@ -41,11 +42,13 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	}
 
 	// Constructor used by a slave.
-	public FacilityManagerLocal(String masterIp, int id, int port) throws UnknownHostException,
-		IOException, NotBoundException, AlreadyBoundException {
+	public FacilityManagerLocal(String masterIp, int id, int port)
+			throws UnknownHostException, IOException, NotBoundException,
+			AlreadyBoundException {
 		this.id = id;
 		registry = LocateRegistry.createRegistry(port);
-		registry.bind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
+		registry.bind(REGISTRY_SLAVE_KEY,
+				UnicastRemoteObject.exportObject(this, 0));
 		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
 		master = (FacilityManager) masterRegistry.lookup(REGISTRY_MASTER_KEY);
 		config = master.connect(id);
@@ -59,45 +62,90 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 		while (scanner.hasNextLine()) {
 			String command = scanner.nextLine();
 			System.out.println(PROMPT);
-			if (command.startsWith("upload") || command.startsWith("mapreduce")) {
-				// Upload a file into the DFS OR perform mapreduce.
-				int fileNameStart = command.indexOf(" ") + 1;
-				int nameSpaceStart = command.lastIndexOf(" ") + 1;
-				String fileName = command.substring(fileNameStart, nameSpaceStart - 1);
-				File file = new File(fileName);
-				if (file.exists()) {
-					String namespace = command.substring(nameSpaceStart);
-					try {
-						if (command.startsWith("upload")) {
-							fs.upload(file, namespace);
-						} else {
-							URLClassLoader ucl = new URLClassLoader(new URL[] { new URL("file://"
-								+ fs.getRoot()) });
-							Class<?> clazz = ucl.loadClass(fileName.substring(0,
-								fileName.indexOf('.')));
-							fs.remoteWriteClass(clazz.getResourceAsStream(fileName), namespace,
-								master.getNodeId());
-							master.loadClassObjects(clazz);
-						}
-					} catch (IOException e) {
-						System.out.println("There was an error uploading the file!");
-						e.printStackTrace();
-					} catch (ClassNotFoundException e) {
-						e.printStackTrace();
-					}
-				} else {
-					System.out.println("Error: File does not exist.");
-					System.out.println(PROMPT);
-				}
+			if (command.startsWith("upload")) {
+				uploadCmd(command);
+			} else if (command.startsWith("mapreduce")) {
+				mapreduceCmd(command);
 			} else if (command.equals("exit")) {
 				// Exit the system.
 				exit();
 			} else {
 				System.out
-					.println("Commands:\n"
-						+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
-						+ "mapreduce <class-filename> <input-file-namespace>\trun the specified mapreduce.");
+						.println("Commands:\n"
+								+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
+								+ "mapreduce <class-filename> <input-file-namespace>\trun the specified mapreduce.");
 			}
+		}
+	}
+
+	private void uploadCmd(String command) {
+		String[] params = command.split(" ");
+		if (params.length != 3) {
+			System.out
+					.println("This command is of the form: upload <filename> <namespace>.");
+			return;
+		}
+		File file = new File(params[1]);
+		String namespace = params[2];
+		if (!file.exists()) {
+			System.out.println("The local file cannot be found.");
+			return;
+		}
+
+		try {
+			if (master.hasDistributedFile(namespace)) {
+				System.out.println("The file system already contains a file with the same "
+						+ "namespace. Please choose another name");
+				return;
+			}
+			
+			fs.upload(file, namespace);
+		} catch (IOException e) {
+			System.out.println("There was an error while uploading the file.");
+			e.printStackTrace();
+		}
+	}
+
+	private void mapreduceCmd(String command) {
+		String[] params = command.split(" ");
+		if (params.length != 3) {
+			System.out.println("This command is of the form: "
+					+ "mapreduce <class-filename> <input-file-namespace> ");
+			return;
+		}
+
+		String classPath = params[1];
+		String namespace = params[2];
+		File classfile = new File(classPath);
+		if (!classfile.exists()) {
+			System.out.println("The local java class file cannot be found.");
+			return;
+		}
+
+		try {
+			if (!master.hasDistributedFile(namespace)) {
+				System.out.println("The input file has not been uploaded into the distributed "
+						+ "file system.");
+				return;
+			}
+
+			URLClassLoader ucl = new URLClassLoader(new URL[] { new URL(
+					"file://" + fs.getRoot()) });
+			Class<?> clazz = ucl.loadClass(classPath.substring(0,
+					classPath.indexOf('.')));
+			fs.remoteWriteClass(clazz.getResourceAsStream(classPath),
+					namespace, config.getMasterIp());
+			Job job = master.dispatchJob(clazz, namespace);
+			System.out.println("The job was succesfully dispatched:");
+			System.out.println(job.toString());
+
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (RemoteException e) {
+			System.out
+					.println("There was an error communicating with the master.");
 		}
 	}
 
@@ -111,8 +159,8 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public Map<Integer, Set<Integer>> distributeBlocks(String namespace, int numBlocks)
-		throws RemoteException {
+	public Map<Integer, Set<Integer>> distributeBlocks(String namespace,
+			int numBlocks) throws RemoteException {
 		return master.distributeBlocks(namespace, numBlocks);
 	}
 
@@ -132,7 +180,8 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException {
+	public void updateFSTable(String namespace, int blockIndex, int nodeId)
+			throws RemoteException {
 		master.updateFSTable(namespace, blockIndex, nodeId);
 	}
 
@@ -141,7 +190,13 @@ public class FacilityManagerLocal extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public void loadClassObjects(Class<?> clazz) throws RemoteException {
-		// TODO Auto-generated method stub
+	public Job dispatchJob(Class<?> clazz, String filename)
+			throws RemoteException {
+		return null;
+	}
+
+	@Override
+	public boolean hasDistributedFile(String filename) throws RemoteException {
+		throw new RemoteException();
 	}
 }
