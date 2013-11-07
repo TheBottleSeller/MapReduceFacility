@@ -1,15 +1,9 @@
-import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
 public class WordCountTest extends MapReduce440 {
 
 	public class Mapper extends Mapper440<Integer, String, String, Integer> {
-
-		public Mapper(FacilityManagerMaster master, File inBlock, File outBlock, int jobId,
-			int nodeId, int blockIndex) {
-			super(master, inBlock, outBlock, jobId, nodeId, blockIndex);
-		}
 
 		@Override
 		public List<KVPair<String, Integer>> map(KVPair<Integer, String> input) {
@@ -26,7 +20,8 @@ public class WordCountTest extends MapReduce440 {
 	public class Reducer extends Reducer440<String, Integer, String, Integer> {
 
 		@Override
-		public KVPair<String, Integer> reduce(KVPair<String, List<Integer>> input) {
+		public KVPair<String, Integer> reduce(
+				KVPair<String, List<Integer>> input) {
 			String word = input.getKey();
 			List<Integer> counts = input.getValue();
 			int total = 0;
@@ -39,9 +34,8 @@ public class WordCountTest extends MapReduce440 {
 	}
 
 	@Override
-	public Mapper440<?, ?, ?, ?> createMapper(FacilityManagerMaster master, File inBlock,
-		File outBlock, int jobId, int nodeId, int blockIndex) {
-		return new Mapper(master, inBlock, outBlock, jobId, nodeId, blockIndex);
+	public Mapper440<?, ?, ?, ?> createMapper() {
+		return new Mapper();
 	}
 
 	public Reducer440<?, ?, ?, ?> createReducer() {

@@ -14,4 +14,9 @@ public class KVPair<K, V> {
 	public V getValue() {
 		return value;
 	}
+	
+	@Override
+	public String toString() {
+		return String.format("Key=%s Value=%s", key, value);
+	}
 }

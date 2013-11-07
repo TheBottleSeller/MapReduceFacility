@@ -73,14 +73,6 @@ public class FS {
 			Map<Integer, Set<Integer>> blockDistribution = master.distributeBlocks(namespace,
 				numBlocks);
 
-			for (Integer nodeId : blockDistribution.keySet()) {
-				Set<Integer> blocks = blockDistribution.get(nodeId);
-				System.out.println("Node " + nodeId);
-				for (Integer blockIndex : blocks) {
-					System.out.print(blockIndex);
-				}
-			}
-
 			// invert the map to get blockIndex -> nodeId map
 			Map<Integer, Set<Integer>> blockToNodes = new HashMap<Integer, Set<Integer>>();
 			for (int nodeId : blockDistribution.keySet()) {
@@ -247,7 +239,7 @@ public class FS {
 	}
 	
 	public File getTempFileBlock(String filename, int blockIndex, int jobId) throws IOException {
-		File temp = new File(createTempDataFilePath(filename, blockIndex, jobId));
+		File temp = new File(createTempDataFilePath(filename, jobId, blockIndex));
 		if (temp.exists()) {
 			temp.delete();
 		}

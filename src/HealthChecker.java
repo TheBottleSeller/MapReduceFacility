@@ -6,37 +6,38 @@ import java.util.Map;
 public class HealthChecker extends Thread {
 
 	private static int HEALTH_CHECK_INTERVAL = 2000; // check every 2 seconds
-	private String[] participantIps;
-	private FacilityManagerMaster master;
-	private Map<Integer, FacilityManager> slaves;
-
-	public HealthChecker(FacilityManagerMaster master, String[] participantIds) {
+	private FacilityManagerMasterImpl master;
+	private boolean[] healthy;
+	private int numParticipants;
+	
+	public HealthChecker(FacilityManagerMasterImpl master, int numParticipants) {
 		this.master = master;
-		this.participantIps = participantIds;
-		slaves = Collections.synchronizedMap(new HashMap<Integer, FacilityManager>());
+		this.numParticipants = numParticipants;
+		this.healthy = new boolean[numParticipants];
 	}
 
 	@Override
 	public void run() {
 		while (true) {
-			for (int i = 0; i < participantIps.length; i++) {
-				FacilityManager slaveManager = slaves.get(i);
-				if (slaveManager != null) {
-					boolean heartbeat = false;
-					try {
-						heartbeat = slaveManager.heartBeat();
-					} catch (RemoteException e) {
-						e.printStackTrace();
-						heartbeat = false;
-					}
+			for (int i = 0; i < numParticipants; i++) {
+				FacilityManager slaveManager = master.getManager(i);
+				if (slaveManager == null) {
+					continue;
+				}
+				boolean heartbeat = false;
+				try {
+					heartbeat = slaveManager.heartBeat();
+				} catch (RemoteException e) {
+					e.printStackTrace();
+					heartbeat = false;
+				}
 
-					// check if the slave is dead
-					if (!heartbeat) {
-						// if the slave is dead, remove itself from the list of participants
-						// and notify the master manager
-						slaves.remove(i);
-						master.slaveDied(i);
-					}
+				// check if the slave is dead
+				if (heartbeat) {
+					healthy[i] = true;
+				} else {
+					healthy[i] = false;
+					master.slaveDied(i);
 				}
 			}
 			try {
@@ -47,14 +48,7 @@ public class HealthChecker extends Thread {
 		}
 	}
 
-	public synchronized void addConnection(int id, FacilityManager slaveManager) {
-		slaves.put(id, slaveManager);
-	}
-
-	public boolean isHealthy(int id) {
-		if (id == master.getNodeId()) {
-			return true;
-		}
-		return slaves.get(id) != null;
+	public boolean isHealthy(int id) throws RemoteException {
+		return healthy[id];
 	}
 }

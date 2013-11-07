@@ -36,7 +36,7 @@ public class Main {
 	}
 
 	public void createExceptionHandler() {
-		Thread.currentThread().setUncaughtExceptionHandler(new UncaughtExceptionHandler() {
+		Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
 			@Override
 			public void uncaughtException(Thread th, Throwable t) {
 				File log = new File("error.log");
@@ -53,6 +53,7 @@ public class Main {
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
+				System.out.println(t);
 			}
 		});
 	}

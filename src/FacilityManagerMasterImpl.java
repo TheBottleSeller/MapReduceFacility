@@ -19,7 +19,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	private static String startParticipantScript = "start_participant.sh";
 
 	private int rmiPort;
-	private Map<Integer, FacilityManager> managers;
+	private FacilityManager[] managers;
 	private Map<String, Map<Integer, Set<Integer>>> fsTable;
 	private int currentNode;
 
@@ -34,9 +34,9 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		String[] participants = config.getParticipantIps();
 		int expectedNumParticipants = participants.length;
 
-		managers = Collections.synchronizedMap(new HashMap<Integer, FacilityManager>(
-			expectedNumParticipants));
-		managers.put(getNodeId(), this);
+		managers = new FacilityManager[expectedNumParticipants];
+		managers[getNodeId()] = this;
+		
 		rmiPort = config.getMrPort();
 
 		/* FILESYSTEM INIT */
@@ -46,13 +46,12 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		r.bind(REGISTRY_MASTER_KEY, UnicastRemoteObject.exportObject(this, 0));
 		connectParticipants();
 
-		healthChecker = new HealthChecker(this, participants);
-		scheduler = new JobScheduler(managers, expectedNumParticipants);
-
 		System.out.println("Waiting for slaves to connect...");
-		while (managers.size() != expectedNumParticipants) {
+		while (managers.length != expectedNumParticipants) {
 			Thread.sleep(1000);
 		}
+		healthChecker = new HealthChecker(this, expectedNumParticipants);
+		scheduler = new JobScheduler(this, expectedNumParticipants);
 		healthChecker.start();
 
 		System.out.println("All slaves connected.");
@@ -75,20 +74,9 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 			pb.redirectErrorStream(true);
 			pb.directory(null);
 			Process p = pb.start();
-			inheritIO(p.getInputStream(), System.out);
-			inheritIO(p.getErrorStream(), System.err);
+			Utils.inheritIO(p.getInputStream(), System.out);
+			Utils.inheritIO(p.getErrorStream(), System.err);
 		}
-	}
-
-	private static void inheritIO(final InputStream src, final PrintStream dest) {
-		new Thread(new Runnable() {
-			public void run() {
-				Scanner sc = new Scanner(src);
-				while (sc.hasNextLine()) {
-					dest.println(sc.nextLine());
-				}
-			}
-		}).start();
 	}
 
 	@Override
@@ -123,8 +111,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		System.out.println("Slave Connected: " + slaveIp);
 		Registry registry = LocateRegistry.getRegistry(slaveIp, rmiPort);
 		FacilityManager slaveManager = (FacilityManager) registry.lookup(REGISTRY_SLAVE_KEY);
-		managers.put(id, slaveManager);
-		healthChecker.addConnection(id, slaveManager);
+		managers[id] = slaveManager;
 		System.out.println(slaveManager.heartBeat());
 		return getConfig();
 	}
@@ -137,7 +124,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		incrementCurrentNode();
 		return currentNode;
 	}
-
+	
 	@Override
 	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException {
 		Map<Integer, Set<Integer>> blocksToNodes = fsTable.get(namespace);
@@ -155,12 +142,12 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	@Override
 	public void exit() {
-		for (Integer id : managers.keySet()) {
+		for (int id = 0; id < managers.length; id++) {
 			if (id == getNodeId()) {
 				continue;
 			}
 			try {
-				managers.get(id).exit();
+				getManager(id).exit();
 			} catch (RemoteException e) {
 				// Ignore, exception should be thrown
 			}
@@ -170,8 +157,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	public void slaveDied(int id) {
-		managers.remove(id);
-		System.out.println("Slave died " + getParticipantIp(id));
+		managers[id] = null;
 	}
 
 	public String getParticipantIp(int id) {
@@ -179,13 +165,13 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public Job dispatchJob(Class<?> clazz, String filename) throws RemoteException {
+	public int dispatchJob(Class<?> clazz, String filename) throws RemoteException {
+		System.out.println("Dispatched job on master");
 		Map<Integer, Set<Integer>> blockLocations = fsTable.get(filename);
 		if (blockLocations == null) {
-			return null;
+			return -1;
 		}
-		scheduler.issueJob(clazz, filename, blockLocations);
-		return null;
+		return scheduler.issueJob(clazz, filename, blockLocations);
 	}
 
 	@Override
@@ -195,6 +181,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	@Override
 	public void mapFinished(int jobId, int nodeId, int blockIndex) throws RemoteException {
+		System.out.println("Mapper finished for block " + blockIndex);
 		boolean mapPhaseFinished = scheduler.mapFinished(jobId, nodeId, blockIndex);
 		if (mapPhaseFinished) {
 			// Start combine phase.
@@ -206,5 +193,13 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	public void combineFinished(int nodeId, int jobId, int blockIndex) throws RemoteException {
 		// TODO Auto-generated method stub
 
+	}
+
+	public FacilityManager getManager(int nodeId) {
+		return managers[nodeId];
+	}
+
+	public boolean isNodeHealthy(int nodeId) {
+		return managers[nodeId] != null;
 	}
 }

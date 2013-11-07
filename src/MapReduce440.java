@@ -1,10 +1,15 @@
 import java.io.File;
 
 public abstract class MapReduce440 {
-
-	public abstract Mapper440<?, ?, ?, ?> createMapper(FacilityManagerMaster master, File inBlock,
-		File outBlock, int jobId, int nodeId, int blockIndex);
+	
+	private Mapper440<?, ?, ?, ?> mapper;
+	private Reducer440<?, ?, ?, ?> reducer;
 
 	public abstract Reducer440<?, ?, ?, ?> createReducer();
+
+	public Mapper440<?, ?, ?, ?> createMapper() {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 }

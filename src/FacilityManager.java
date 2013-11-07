@@ -8,14 +8,17 @@ public interface FacilityManager extends Remote {
 
 	public boolean heartBeat() throws RemoteException;
 
-	public int getNodeId();
+	public int getNodeId() throws RemoteException;
 
 	public void exit() throws RemoteException;
+	
+	public int dispatchJob(Class<?> clazz, String filename) throws RemoteException;
 
 	public boolean runMapJob(int jobId, String filename, int blockIndex, Class<?> clazz)
 		throws RemoteException;
 
 	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId)
 		throws RemoteException;
+
 
 }

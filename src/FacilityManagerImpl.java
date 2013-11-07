@@ -124,15 +124,15 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 					+ "file system.");
 				return;
 			}
-
 			URLClassLoader ucl = new URLClassLoader(new URL[] { new URL("file://" + fs.getRoot()) });
 			Class<?> clazz = ucl.loadClass(classPath.substring(0, classPath.indexOf('.')));
-			fs.remoteWriteClass(clazz.getResourceAsStream(classPath), namespace,
-				config.getMasterIp());
-			Job job = master.dispatchJob(clazz, namespace);
-			System.out.println("The job was succesfully dispatched:");
-			System.out.println(job.toString());
-
+			
+			int jobId = dispatchJob(clazz, namespace);
+			if (jobId == -1) {
+				System.out.println("There was a problem running the map reduce job");
+			} else {
+				System.out.println("The job was succesfully dispatched with id " + jobId);
+			}
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
@@ -159,20 +159,43 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	public void exit() {
 		System.exit(0);
 	}
+	
+	@Override
+	public int dispatchJob(Class<?> clazz, String filename)
+			throws RemoteException {
+		fs.remoteWriteClass(clazz.getResourceAsStream(clazz.getName()), filename,
+				config.getMasterIp());
+		return master.dispatchJob(clazz, filename);
+	}
 
 	@Override
 	public boolean runMapJob(int jobId, String filename, int blockIndex, Class<?> clazz)
 		throws RemoteException {
+		System.out.println("Running local map job");
 		File block = fs.getFileBlock(filename, blockIndex);
 		if (!block.exists()) {
 			return false;
 		}
+		boolean success = false;
 		try {
 			MapReduce440 mr = (MapReduce440) clazz.newInstance();
 			File outputBlock = fs.getTempFileBlock(filename, blockIndex, jobId);
-			Mapper440<?, ?, ?, ?> mapper = mr.createMapper(master, block, outputBlock, jobId,
-				getNodeId(), blockIndex);
+			Mapper440<?, ?, ?, ?> mapper = mr.createMapper();
+			
+			// set necessary parameters
+			mapper.setMaster(master);
+			mapper.setInBlock(block);
+			mapper.setOutBlock(outputBlock);
+			mapper.setJobId(jobId);
+			mapper.setNodeId(getNodeId()); 
+			mapper.setBlockIndex(blockIndex);
+			
+			// init mapper by opening up files
+			mapper.init();
+			
+			// start mapper
 			mapper.start();
+			success = true;
 		} catch (InstantiationException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
@@ -180,7 +203,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		return true;
+		return success;
 	}
 
 	@Override
