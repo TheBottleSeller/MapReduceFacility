@@ -30,6 +30,8 @@ public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 	public void run() {
 		int lineNum = 0;
 		String line;
+		int maxKey = Integer.MIN_VALUE;
+		int minKey = Integer.MAX_VALUE;
 		try {
 			while ((line = reader.readLine()) != null) {
 				KVPair<Integer, String> record = new KVPair<Integer, String>(lineNum, line);
@@ -37,6 +39,9 @@ public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 				List<KVPair<Kout, Vout>> mappedRecord = map(record);
 				for (KVPair<Kout, Vout> kvPair : mappedRecord) {
 					System.out.println("intermediate record " + kvPair);
+					int keyHash = kvPair.getKey().hashCode();
+					maxKey = Math.max(maxKey, keyHash);
+					minKey = Math.min(minKey, keyHash);
 					writer.write(kvPair.getKey() + "\n");
 					writer.write(kvPair.getValue() + "\n");
 				}
@@ -44,7 +49,7 @@ public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 			}
 			writer.close();
 			reader.close();
-			master.mapFinished(jobId, nodeId, blockIndex);
+			master.mapFinished(jobId, nodeId, blockIndex, maxKey, minKey);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

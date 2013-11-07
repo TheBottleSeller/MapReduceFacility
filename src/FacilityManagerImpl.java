@@ -207,9 +207,10 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId)
+	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId, int maxKey, int minKey)
 		throws RemoteException {
-		// TODO Auto-generated method stub
+		
 		return false;
 	}
+	
 }
