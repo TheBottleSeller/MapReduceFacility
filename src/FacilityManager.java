@@ -11,14 +11,17 @@ public interface FacilityManager extends Remote {
 	public int getNodeId() throws RemoteException;
 
 	public void exit() throws RemoteException;
-	
-	public int dispatchJob(Class<?> clazz, String filename) throws RemoteException;
 
-	public boolean runMapJob(int jobId, String filename, int blockIndex, Class<?> clazz)
-		throws RemoteException;
+	public int dispatchJob(Class<?> clazz, String filename)
+			throws RemoteException;
 
-	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId, int maxKey, int minKey)
-		throws RemoteException;
+	public boolean runMapJob(int jobId, String filename, int blockIndex,
+			Class<?> clazz) throws RemoteException;
 
+	public boolean runCombineJob(Set<Integer> blockIndices, String namespace,
+			int jobId, int maxKey, int minKey, int numReducers)
+			throws RemoteException;
 
+	public boolean runReduceJob(int jobId, Set<Integer> mapperIds,
+			int partitionNo) throws RemoteException;
 }

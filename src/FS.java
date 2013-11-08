@@ -37,8 +37,10 @@ public class FS {
 		WRITE_DATA, WRITE_CLASS;
 	}
 
-	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
-		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
+	public FS(FacilityManager manager, FacilityManagerMaster master)
+			throws IOException {
+		localFiles = Collections
+				.synchronizedMap(new HashMap<String, Set<Integer>>());
 		this.manager = manager;
 		this.master = master;
 		blockSize = manager.getConfig().getBlockSize();
@@ -66,12 +68,14 @@ public class FS {
 
 	public void upload(File file, String namespace) throws IOException {
 		int totalLines = getNumLines(file);
-		int numBlocks = Math.max(1,
-			(int) Math.ceil(totalLines * 1.0 / manager.getConfig().getBlockSize()));
+		int numBlocks = Math.max(
+				1,
+				(int) Math.ceil(totalLines * 1.0
+						/ manager.getConfig().getBlockSize()));
 
 		try {
-			Map<Integer, Set<Integer>> blockDistribution = master.distributeBlocks(namespace,
-				numBlocks);
+			Map<Integer, Set<Integer>> blockDistribution = master
+					.distributeBlocks(namespace, numBlocks);
 
 			// invert the map to get blockIndex -> nodeId map
 			Map<Integer, Set<Integer>> blockToNodes = new HashMap<Integer, Set<Integer>>();
@@ -101,9 +105,11 @@ public class FS {
 						// upper bound size of each line to 100 characters
 						reader.mark(blockSize * 100);
 						if (manager.getNodeId() == nodeId) {
-							success = localWriteData(reader, namespace, i, numLines);
+							success = localWriteData(reader, namespace, i,
+									numLines);
 						} else {
-							success = remoteWriteData(reader, nodeId, namespace, i, numLines);
+							success = remoteWriteData(reader, nodeId,
+									namespace, i, numLines);
 						}
 						if (numReplicated != numNodes - 1) {
 							reader.reset();
@@ -119,7 +125,8 @@ public class FS {
 					if (success) {
 						numReplicated++;
 					} else {
-						System.out.println("Could not upload file. No participants responding.");
+						System.out
+								.println("Could not upload file. No participants responding.");
 					}
 				}
 			}
@@ -129,8 +136,8 @@ public class FS {
 		}
 	}
 
-	public boolean localWriteData(BufferedReader reader, String namespace, int blockIndex,
-		int numLines) {
+	public boolean localWriteData(BufferedReader reader, String namespace,
+			int blockIndex, int numLines) {
 		boolean success = false;
 		File file = new File(createDataFilePath(namespace, blockIndex));
 		if (file.exists()) {
@@ -156,16 +163,18 @@ public class FS {
 		return success;
 	}
 
-	public boolean remoteWriteData(BufferedReader reader, int nodeId, String namespace,
-		int blockIndex, int numLines) {
+	public boolean remoteWriteData(BufferedReader reader, int nodeId,
+			String namespace, int blockIndex, int numLines) {
 		String nodeAddress;
 		boolean success = false;
 		try {
 			nodeAddress = manager.getConfig().getParticipantIps()[nodeId];
 			Socket socket = new Socket(nodeAddress, WRITE_PORT);
 
-			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+			ObjectOutputStream out = new ObjectOutputStream(
+					socket.getOutputStream());
+			ObjectInputStream in = new ObjectInputStream(
+					socket.getInputStream());
 			out.flush();
 
 			out.writeObject(Messages.WRITE_DATA);
@@ -188,14 +197,17 @@ public class FS {
 		return success;
 	}
 
-	public boolean remoteWriteClass(InputStream is, String namespace, String nodeAddress) {
+	public boolean remoteWriteClass(InputStream is, String namespace,
+			String nodeAddress) {
 		boolean success = false;
 		try {
 			Socket socket = new Socket(nodeAddress, WRITE_PORT);
 
-			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+			ObjectOutputStream out = new ObjectOutputStream(
+					socket.getOutputStream());
 			out.flush();
-			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+			ObjectInputStream in = new ObjectInputStream(
+					socket.getInputStream());
 
 			out.writeObject(Messages.WRITE_CLASS);
 			out.writeUTF(namespace);
@@ -234,17 +246,38 @@ public class FS {
 		}
 	}
 
-	public File getFileBlock(String filename, int blockIndex) {
+	public File makeFileBlock(String filename, int blockIndex) {
 		return new File(createDataFilePath(filename, blockIndex));
 	}
-	
-	public File getTempFileBlock(String filename, int blockIndex, int jobId) throws IOException {
-		File temp = new File(createTempDataFilePath(filename, jobId, blockIndex));
+
+	public File makeMappedFileBlock(String filename, int blockIndex, int jobId)
+			throws IOException {
+		File temp = new File(
+				createMappedDataFilePath(filename, jobId, blockIndex));
 		if (temp.exists()) {
 			temp.delete();
 		}
 		temp.createNewFile();
 		return temp;
+	}
+	
+	public File getMappedFileBlock(String filename, int blockIndex, int jobId) {
+		return new File(createMappedDataFilePath(filename, jobId, blockIndex));
+	}
+
+	public File makePartitionFileBlock(String filename, int jobId,
+			int partitionNum) throws IOException {
+		File partition = new File(createPartitionDataFilePath(filename, jobId,
+				partitionNum));
+		if (partition.exists()) {
+			partition.delete();
+		}
+		partition.createNewFile();
+		return partition;
+	}
+	
+	public File getPartitionFileBlock(String filename, int jobId, int partitionNo) {
+		return new File(createPartitionDataFilePath(filename, jobId, partitionNo));
 	}
 
 	private int getNumLines(File file) throws IOException {
@@ -330,7 +363,8 @@ public class FS {
 					int blockIndex = in.readInt();
 					int numLines = in.readInt();
 
-					File file = new File(createDataFilePath(namespace, blockIndex));
+					File file = new File(createDataFilePath(namespace,
+							blockIndex));
 					if (file.exists()) {
 						file.delete();
 					}
@@ -380,19 +414,28 @@ public class FS {
 	}
 
 	public class Reader {
-		
+
 		public Reader() {
-			
+
 		}
-		
+
 	}
 
 	public String createDataFilePath(String filename, int blockIndex) {
-		return String.format("%s%s%s-%d.pt", getRoot(), DATA_PATH, filename, blockIndex);
+		return String.format("%s%s%s-%d.pt", getRoot(), DATA_PATH, filename,
+				blockIndex);
 	}
-	
-	public String createTempDataFilePath(String filename, int jobId, int blockIndex) {
-		return String.format("%s%s%s-jobId-%d-%d.tmp", getRoot(), DATA_PATH, filename, jobId, blockIndex);
+
+	public String createMappedDataFilePath(String filename, int jobId,
+			int blockIndex) {
+		return String.format("%s%s%s-jobId-%d-%d.tmp", getRoot(), DATA_PATH,
+				filename, jobId, blockIndex);
+	}
+
+	public String createPartitionDataFilePath(String filename, int jobId,
+			int partitionNo) {
+		return String.format("%s%s%s-jobId-%d-part-%d", getRoot(), DATA_PATH,
+				filename, jobId, partitionNo);
 	}
 
 	public String createClassFilePath(String filename) {

@@ -186,9 +186,12 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public void combineFinished(int nodeId, int jobId, int blockIndex) throws RemoteException {
-		// TODO Auto-generated method stub
-
+	public void combineFinished(int nodeId, int jobId, int blocksCombined) throws RemoteException {
+		scheduler.combineFinished(nodeId, jobId, blocksCombined);
+	}
+	
+	public Map<Integer, Set<Integer>> getBlockLocations(String filename) {
+		return fsTable.get(filename);
 	}
 
 	public FacilityManager getManager(int nodeId) {

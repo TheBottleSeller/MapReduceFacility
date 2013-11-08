@@ -53,16 +53,11 @@ public class JobScheduler {
 		int numBlocks = blockLocations.size();
 		Job job = new Job(jobId, inputFile, numBlocks);
 		for (int blockIndex : blockLocations.keySet()) {
-			System.out.println("Assigning node for block " + blockIndex);
 			Set<Integer> nodeIds = blockLocations.get(blockIndex);
-			System.out.println("Possible nodes "
-					+ Arrays.toString(nodeIds.toArray()));
 			int minWork = Integer.MAX_VALUE;
 			int minWorker = -1;
 			for (int nodeId : nodeIds) {
-				System.out.println("Checking node " + nodeId);
 				if (master.isNodeHealthy(nodeId)) {
-					System.out.println("Node is healthy");
 					int work = getNumMappers(nodeId) + getNumReducers(nodeId);
 					if (work < minWork) {
 						minWork = work;
@@ -130,7 +125,7 @@ public class JobScheduler {
 					try {
 						mapper.runCombineJob(nodeToBlocks.get(mapperId),
 								job.getFilename(), jobId, job.getMaxKey(),
-								job.getMinKey());
+								job.getMinKey(), job.getNumBlocks());
 						success = true;
 					} catch (RemoteException e) {
 						// TODO Auto-generated catch block
@@ -145,7 +140,37 @@ public class JobScheduler {
 		}
 	}
 
-	public void combineFinished(int jobId, int nodeId) {
-
+	public void combineFinished(int jobId, int nodeId, int combinedBlocks) {
+		if (combinedBlocks < 1) {
+			// TODO handle this case
+			return;
+		}
+		Job job = activeJobs.get(jobId);
+		boolean combinePhaseFinished = job.combineFinished(combinedBlocks);
+		if (combinePhaseFinished) {
+			System.out.println("Scheduler issuing reduces");
+			Map<Integer, Set<Integer>> blockLocations = master.getBlockLocations(job.getFilename());
+			for (int blockIndex : blockLocations.keySet()) {
+				Set<Integer> nodeIds = blockLocations.get(blockIndex);
+				int minWork = Integer.MAX_VALUE;
+				int minWorker = -1;
+				for (int id : nodeIds) {
+					if (master.isNodeHealthy(id)) {
+						int work = getNumMappers(id) + getNumReducers(id);
+						if (work < minWork) {
+							minWork = work;
+							minWorker = id;
+						}
+					}
+				}
+				if (minWorker == -1) {
+					System.out.println("Could not find worker for block "
+							+ blockIndex);
+				}
+				System.out.println("Found worker " + minWorker);
+				job.addReducer(minWorker, blockIndex);
+				incrementActiveReduces(minWorker);
+			}
+		}
 	}
 }
