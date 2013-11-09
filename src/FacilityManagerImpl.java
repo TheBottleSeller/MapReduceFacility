@@ -258,7 +258,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			String remoteFilename = String.format("%s-jobId-%d-part-%d-%d",
 					filename, jobId, partitionNo, getNodeId());
 			try {
-				fs.sendFile(partitionPath, remoteFilename,
+				fs.sendFile(jobId, partitionPath, remoteFilename,
 						config.getNodeAddress(reducers[partitionNo]));
 			} catch (FileNotFoundException e) {
 				success = false;
@@ -277,6 +277,13 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			mr = (MapReduce440) clazz.newInstance();
 			Reducer440<?, ?, ?, ?> reducer = mr.createReducer();
 			
+			File outBlock = new File(fs.createReduceOutputFilePath(jobId, filename, getNodeId()));
+			
+			reducer.setMaster(master);
+			reducer.setFS(fs);
+			reducer.setJobId(jobId);
+			reducer.setNodeId(getNodeId());
+			reducer.setOutBlock(outBlock);
 			
 			success = true;
 		} catch (InstantiationException e) {

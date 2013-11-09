@@ -7,14 +7,17 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 
 	private FacilityManagerMaster master;
+	private FS fs;
 	private File inPart;
 	private File outPart;
-	int jobId;
-	int nodeId;
+	private int jobId;
+	private int nodeId;
+	private int numMappers;
 
 	private BufferedReader reader;
 	private PrintWriter writer;
@@ -28,12 +31,32 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 
 	@Override
 	public void run() {
+		// wait for all partition files
+		while (fs.getParititonFiles(jobId).size() != numMappers) {
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		
+		Set<File> partitionFiles = fs.getParititonFiles(jobId);
+		PrintWriter writer;
+		try {
+			writer = new PrintWriter(new FileOutputStream(inPart));
+			
+		} catch (FileNotFoundException e1) {
+			e1.printStackTrace();
+		}
+		// TODO STOPPED HERE
+		
 		String line;
 		String key;
 		int numValues;
 		List<Vin> values = new ArrayList<Vin>();
 		try {
-			readLines: while ((key = reader.readLine()) != null) {
+			readLines: 
+				while ((key = reader.readLine()) != null) {
 				line = reader.readLine();
 				if (line == null) {
 					continue;
@@ -88,6 +111,10 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 
 	public void setWriter(PrintWriter writer) {
 		this.writer = writer;
+	}
+	
+	public FS setFS(FS fs) {
+		return fs;
 	}
 
 }

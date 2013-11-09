@@ -29,6 +29,7 @@ public class FS {
 	private static int READ_PORT = 8084;
 
 	private Map<String, Set<Integer>> localFiles;
+	private Map<Integer, Set<File>> partitionFiles;
 	private FacilityManager manager;
 	private FacilityManagerMaster master;
 	private int blockSize;
@@ -40,6 +41,7 @@ public class FS {
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
+		partitionFiles = Collections.synchronizedMap(new HashMap<Integer, Set<File>>());
 		this.manager = manager;
 		this.master = master;
 		blockSize = manager.getConfig().getBlockSize();
@@ -157,7 +159,7 @@ public class FS {
 		return success;
 	}
 	
-	public boolean sendFile(String localFilepath, String remoteFilename, String nodeAddress) throws FileNotFoundException {
+	public boolean sendFile(int jobId, String localFilepath, String remoteFilename, String nodeAddress) throws FileNotFoundException {
 		boolean success = false;
 		BufferedReader reader = new BufferedReader(new FileReader(localFilepath));
 		try {
@@ -168,6 +170,7 @@ public class FS {
 			out.flush();
 
 			out.writeObject(Messages.WRITE_PARTITION);
+			out.writeInt(jobId);
 			out.writeUTF(remoteFilename);
 			String line = "";
 			while ((line = reader.readLine()) != null) {
@@ -444,25 +447,45 @@ public class FS {
 			
 			private boolean readPartitionFile(ObjectInputStream in) {
 				boolean success = false;
+				PrintWriter writer = null;
 				try {
+					int jobId = in.readInt();
 					String filename = in.readUTF();
 					File newFile = new File(getRoot() + DATA_PATH + filename);
 					if (newFile.exists()) {
 						newFile.delete();
 					}
 					newFile.createNewFile();
-					PrintWriter writer = new PrintWriter(new FileOutputStream(newFile));
+					writer = new PrintWriter(new FileOutputStream(newFile));
 					while (in.readBoolean()) {
 						String line = in.readUTF();
 						writer.println(line);
 					}
+					synchronized(partitionFiles) {
+						
+						Set<File> files = partitionFiles.get(jobId);
+						if (partitionFiles == null) {
+							files = new HashSet<File>();
+							partitionFiles.put(jobId, files);
+						}
+						files.add(newFile);
+					}
+					
 					success = true;
 				} catch (IOException e) {
 					e.printStackTrace();
+				} finally {
+					if (writer != null) {
+						writer.close();
+					}
 				}
 				return success;
 			}
 		}
+	}
+	
+	public Set<File> getParititonFiles(int jobId) {
+		return partitionFiles.get(jobId);
 	}
 
 	public class Reader {
@@ -494,5 +517,10 @@ public class FS {
 
 	public String createClassFilePath(String filename) {
 		return String.format("%s%s%s.class", getRoot(), CLASS_PATH, filename);
+	}
+
+	public String createReduceOutputFilePath(int jobId, String filename,
+			int nodeId) {
+		return String.format("%s%s%s-jobId-%d-%d", getRoot(), DATA_PATH, filename, jobId, nodeId);
 	}
 }
