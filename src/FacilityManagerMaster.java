@@ -1,3 +1,4 @@
+import java.io.FileNotFoundException;
 import java.rmi.NotBoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -22,6 +23,6 @@ public interface FacilityManagerMaster extends FacilityManager, Remote {
 
 	public void combineFinished(int jobId, int nodeId, int blocksCombined) throws RemoteException;
 
-	public void reduceFinished(int nodeId, int jobId) throws RemoteException;
+	public void reduceFinished(int nodeId, int jobId) throws RemoteException, FileNotFoundException;
 
 }

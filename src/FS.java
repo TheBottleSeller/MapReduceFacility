@@ -281,9 +281,9 @@ public class FS {
 		return new File(createMappedDataFilePath(filename, jobId, blockIndex));
 	}
 
-	public File makePartitionFileBlock(String filename, int jobId, int partitionNum)
+	public File makePartitionFileBlock(String filename, int jobId, int partitionNo)
 		throws IOException {
-		File partition = new File(createPartitionDataFilePath(filename, jobId, partitionNum));
+		File partition = new File(createPartitionDataFilePath(filename, jobId, partitionNo));
 		if (partition.exists()) {
 			partition.delete();
 		}

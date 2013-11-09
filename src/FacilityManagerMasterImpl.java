@@ -1,3 +1,4 @@
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
@@ -189,7 +190,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public void reduceFinished(int nodeId, int jobId) throws RemoteException {
+	public void reduceFinished(int nodeId, int jobId) throws FileNotFoundException, RemoteException {
 		scheduler.reduceFinished(nodeId, jobId);
 	}
 
