@@ -1,4 +1,5 @@
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -41,13 +42,16 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	// Constructor used by a slave.
-	public FacilityManagerImpl(String masterIp, int id, int port) throws UnknownHostException,
-		IOException, NotBoundException, AlreadyBoundException {
+	public FacilityManagerImpl(String masterIp, int id, int port)
+			throws UnknownHostException, IOException, NotBoundException,
+			AlreadyBoundException {
 		this.id = id;
 		registry = LocateRegistry.createRegistry(port);
-		registry.bind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
+		registry.bind(REGISTRY_SLAVE_KEY,
+				UnicastRemoteObject.exportObject(this, 0));
 		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
-		master = (FacilityManagerMaster) masterRegistry.lookup(REGISTRY_MASTER_KEY);
+		master = (FacilityManagerMaster) masterRegistry
+				.lookup(REGISTRY_MASTER_KEY);
 		config = master.connect(id);
 		fs = new FS(this, master);
 	}
@@ -68,9 +72,9 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 				exit();
 			} else {
 				System.out
-					.println("Commands:\n"
-						+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
-						+ "mapreduce <class-filename> <input-file-namespace>\trun the specified mapreduce.");
+						.println("Commands:\n"
+								+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
+								+ "mapreduce <class-filename> <input-file-namespace>\trun the specified mapreduce.");
 			}
 		}
 	}
@@ -78,7 +82,8 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	private void uploadCmd(String command) {
 		String[] params = command.split(" ");
 		if (params.length != 3) {
-			System.out.println("This command is of the form: upload <filename> <namespace>.");
+			System.out
+					.println("This command is of the form: upload <filename> <namespace>.");
 			return;
 		}
 		File file = new File(params[1]);
@@ -90,8 +95,9 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 		try {
 			if (master.hasDistributedFile(namespace)) {
-				System.out.println("The file system already contains a file with the same "
-					+ "namespace. Please choose another name");
+				System.out
+						.println("The file system already contains a file with the same "
+								+ "namespace. Please choose another name");
 				return;
 			}
 
@@ -106,7 +112,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		String[] params = command.split(" ");
 		if (params.length != 3) {
 			System.out.println("This command is of the form: "
-				+ "mapreduce <class-filename> <input-file-namespace> ");
+					+ "mapreduce <class-filename> <input-file-namespace> ");
 			return;
 		}
 
@@ -120,25 +126,32 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 		try {
 			if (!master.hasDistributedFile(namespace)) {
-				System.out.println("The input file has not been uploaded into the distributed "
-					+ "file system.");
+				System.out
+						.println("The input file has not been uploaded into the distributed "
+								+ "file system.");
 				return;
 			}
-			URLClassLoader ucl = new URLClassLoader(new URL[] { new URL("file://" + fs.getRoot()) });
-			Class<?> clazz = ucl.loadClass(classPath.substring(0, classPath.indexOf('.')));
+			URLClassLoader ucl = new URLClassLoader(new URL[] { new URL(
+					"file://" + fs.getRoot()) });
+			Class<?> clazz = ucl.loadClass(classPath.substring(0,
+					classPath.indexOf('.')));
 
 			int jobId = dispatchJob(clazz, namespace);
 			if (jobId == -1) {
-				System.out.println("There was a problem running the map reduce job");
+				System.out
+						.println("There was a problem running the map reduce job");
 			} else {
-				System.out.println("The job was succesfully dispatched with id " + jobId);
+				System.out
+						.println("The job was succesfully dispatched with id "
+								+ jobId);
 			}
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
 		} catch (ClassNotFoundException e) {
 			e.printStackTrace();
 		} catch (RemoteException e) {
-			System.out.println("There was an error communicating with the master.");
+			System.out
+					.println("There was an error communicating with the master.");
 		}
 	}
 
@@ -161,15 +174,16 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public int dispatchJob(Class<?> clazz, String filename) throws RemoteException {
-		fs.remoteWriteClass(clazz.getResourceAsStream(clazz.getName()), filename,
-			config.getMasterIp());
+	public int dispatchJob(Class<?> clazz, String filename)
+			throws RemoteException {
+		fs.remoteWriteClass(clazz.getResourceAsStream(clazz.getName()),
+				filename, config.getMasterIp());
 		return master.dispatchJob(clazz, filename);
 	}
 
 	@Override
-	public boolean runMapJob(int jobId, String filename, int blockIndex, Class<?> clazz)
-		throws RemoteException {
+	public boolean runMapJob(int jobId, String filename, int blockIndex,
+			Class<?> clazz) throws RemoteException {
 		System.out.println("Running local map job");
 		File block = fs.makeFileBlock(filename, blockIndex);
 		if (!block.exists()) {
@@ -207,8 +221,9 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runCombineJob(Set<Integer> blockIndices, String filename, int jobId, int maxKey,
-		int minKey, int numReducers) throws RemoteException {
+	public boolean runCombineJob(Set<Integer> blockIndices, String filename,
+			int jobId, int maxKey, int minKey, int numReducers)
+			throws RemoteException {
 
 		boolean success = false;
 		Combiner440 combiner = new Combiner440();
@@ -232,21 +247,46 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 		return success;
 	}
-	
+
 	@Override
 	public boolean distributePartitions(int jobId, String filename,
 			int[] reducers) throws RemoteException {
+		boolean success = true;
 		for (int partitionNo = 0; partitionNo < reducers.length; partitionNo++) {
-			String partitionPath = fs.createPartitionDataFilePath(filename, jobId, partitionNo);
-			fs.sendFile(partitionPath, config.getNodeAddress(reducers[partitionNo]));
+			String partitionPath = fs.createPartitionDataFilePath(filename,
+					jobId, partitionNo);
+			String remoteFilename = String.format("%s-jobId-%d-part-%d-%d",
+					filename, jobId, partitionNo, getNodeId());
+			try {
+				fs.sendFile(partitionPath, remoteFilename,
+						config.getNodeAddress(reducers[partitionNo]));
+			} catch (FileNotFoundException e) {
+				success = false;
+				e.printStackTrace();
+			}
 		}
-		return false;
+		return success;
 	}
 
 	@Override
 	public boolean runReduceJob(int jobId, String filename, int partitionNo,
 			int numMappers, Class<?> clazz) throws RemoteException {
-		return false;
+		boolean success = false;
+		MapReduce440 mr;
+		try {
+			mr = (MapReduce440) clazz.newInstance();
+			Reducer440<?, ?, ?, ?> reducer = mr.createReducer();
+			
+			
+			success = true;
+		} catch (InstantiationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return success;
 	}
 
 }

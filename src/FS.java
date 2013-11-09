@@ -3,6 +3,7 @@ import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
@@ -34,8 +35,8 @@ public class FS {
 	private WriteServer writeServer;
 
 	private enum Messages {
-		WRITE_DATA, WRITE_CLASS;
-	}
+		WRITE_DATA, WRITE_CLASS, WRITE_PARTITION
+	};
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
@@ -156,8 +157,33 @@ public class FS {
 		return success;
 	}
 	
-	public boolean sendFile(String filenpath, String nodeAddress) {
-		return true;
+	public boolean sendFile(String localFilepath, String remoteFilename, String nodeAddress) throws FileNotFoundException {
+		boolean success = false;
+		BufferedReader reader = new BufferedReader(new FileReader(localFilepath));
+		try {
+			Socket socket = new Socket(nodeAddress, WRITE_PORT);
+
+			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+			out.flush();
+
+			out.writeObject(Messages.WRITE_PARTITION);
+			out.writeUTF(remoteFilename);
+			String line = "";
+			while ((line = reader.readLine()) != null) {
+				out.writeBoolean(true);
+				out.writeUTF(line);
+			}
+			out.writeBoolean(false);
+			out.flush();
+			reader.close();
+			success = in.readBoolean();
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return success;
 	}
 
 	public boolean remoteWriteData(BufferedReader reader, int nodeId, String namespace,
@@ -338,12 +364,15 @@ public class FS {
 				try {
 					out = new ObjectOutputStream(socket.getOutputStream());
 					in = new ObjectInputStream(socket.getInputStream());
-
-					if (in.readObject().equals(Messages.WRITE_DATA)) {
+					Messages msg = (Messages) in.readObject();
+					if (msg.equals(Messages.WRITE_DATA)) {
 						success = readDataFile(in);
-					} else {
+					} else if (msg.equals(Messages.WRITE_CLASS)) {
 						success = readClassFile(in);
+					} else if (msg.equals(Messages.WRITE_PARTITION)) {
+						success = readPartitionFile(in);
 					}
+					
 				} catch (IOException e) {
 					e.printStackTrace();
 				} catch (ClassNotFoundException e) {
@@ -411,6 +440,27 @@ public class FS {
 					e.printStackTrace();
 					return false;
 				}
+			}
+			
+			private boolean readPartitionFile(ObjectInputStream in) {
+				boolean success = false;
+				try {
+					String filename = in.readUTF();
+					File newFile = new File(getRoot() + DATA_PATH + filename);
+					if (newFile.exists()) {
+						newFile.delete();
+					}
+					newFile.createNewFile();
+					PrintWriter writer = new PrintWriter(new FileOutputStream(newFile));
+					while (in.readBoolean()) {
+						String line = in.readUTF();
+						writer.println(line);
+					}
+					success = true;
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+				return success;
 			}
 		}
 	}
