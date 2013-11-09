@@ -279,6 +279,19 @@ public class FS {
 	public File getPartitionFileBlock(String filename, int jobId, int partitionNo) {
 		return new File(createPartitionDataFilePath(filename, jobId, partitionNo));
 	}
+	
+	public File makeReduceInputFile(String filename, int jobId, int partitionNum) throws IOException {
+		File partition = new File(createReducerInputFilePath(filename, jobId, partitionNum));
+		if (partition.exists()) {
+			partition.delete();
+		}
+		partition.createNewFile();
+		return partition;
+	}
+	
+	public File getReduceInputFile(String filename, int jobId, int partitionNum) {
+		return new File(createReducerInputFilePath(filename, jobId, partitionNum));
+	}
 
 	private int getNumLines(File file) throws IOException {
 		InputStream is = new BufferedInputStream(new FileInputStream(file));
@@ -435,6 +448,11 @@ public class FS {
 	public String createPartitionDataFilePath(String filename, int jobId,
 			int partitionNo) {
 		return String.format("%s%s%s-jobId-%d-part-%d", getRoot(), DATA_PATH,
+				filename, jobId, partitionNo);
+	}
+	
+	public String createReducerInputFilePath(String filename, int jobId, int partitionNo) {
+		return String.format("%s%s%s-jobId-%d-full-part-%d", getRoot(), DATA_PATH,
 				filename, jobId, partitionNo);
 	}
 

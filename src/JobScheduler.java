@@ -172,5 +172,27 @@ public class JobScheduler {
 				incrementActiveReduces(minWorker);
 			}
 		}
+		
+		System.out.println("Scheduled reducers");
+		activeJobs.put(jobId, job);
+
+		for (int blockIndex = 0; blockIndex < numBlocks; blockIndex++) {
+			int nodeId = job.getMapper(blockIndex);
+			System.out.println("Issued node " + nodeId + " with map for block "
+					+ blockIndex);
+			FacilityManager manager = master.getManager(nodeId);
+			boolean success = false;
+			try {
+				success = manager
+						.runMapJob(jobId, inputFile, blockIndex, clazz);
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+			if (!success) {
+				// TODO: What happens here..?
+			}
+		}
+		System.out.println("running map jobs");
+		return jobId;
 	}
 }
