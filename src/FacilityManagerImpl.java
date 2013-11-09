@@ -295,5 +295,18 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		}
 		return success;
 	}
+	
+	@Override
+	public boolean combineReduces() throws RemoteException {
+		// Combine shit.
+		uploadCmd("");
+		return false;
+	}
+	
+	@Override
+	public void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
+		throws FileNotFoundException {
+		fs.sendFile(localFilepath, remoteFilename, nodeAddress);
+	}
 
 }
