@@ -22,6 +22,9 @@ public interface FacilityManager extends Remote {
 			int jobId, int maxKey, int minKey, int numReducers)
 			throws RemoteException;
 
-	public boolean runReduceJob(int jobId, Set<Integer> mapperIds,
-			int partitionNo) throws RemoteException;
+	public boolean distributePartitions(int jobId, String filename,
+			int[] reducers) throws RemoteException;
+
+	public boolean runReduceJob(int jobId, String filename, int partitionNo,
+			int numMappers, Class<?> clazz) throws RemoteException;
 }

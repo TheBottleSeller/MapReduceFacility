@@ -5,6 +5,7 @@ public class Job {
 
 	private int id;
 	private String filename;
+	private Class<?> clazz;
 	private int numBlocks;
 	private int[] mappers;
 	private int[] reducers;
@@ -14,9 +15,10 @@ public class Job {
 	private int maxKey;
 	private int minKey;
 
-	public Job(int id, String filename, int numBlocks) {
+	public Job(int id, Class<?> clazz, String filename, int numBlocks) {
 		this.id = id;
 		this.filename = filename;
+		this.clazz = clazz;
 		this.numBlocks = numBlocks;
 		mappers = new int[numBlocks];
 		reducers = new int[numBlocks];
@@ -27,6 +29,10 @@ public class Job {
 		minKey = Integer.MAX_VALUE;
 	}
 	
+	public Class<?> getUserDefinedClass() {
+		return clazz;
+	}
+	
 	public synchronized void addMapper(int nodeId, int blockIndex) {
 		mappers[blockIndex] = nodeId;
 	}
@@ -35,8 +41,21 @@ public class Job {
 		reducers[partitionNo] = nodeId;
 	}
 	
+	public int[] getMappers() {
+		return mappers;
+	}
+	
 	public int getMapper(int blockIndex) {
 		return mappers[blockIndex];
+	}
+	
+
+	public int getReducer(int partitionNo) {
+		return reducers[partitionNo];
+	}
+	
+	public int[] getReducers() {
+		return reducers;
 	}
 	
 	public synchronized boolean mapFinished(int maxKey, int minKey) {
@@ -75,4 +94,5 @@ public class Job {
 	public String toString() {
 		return String.format("id=%d file=%s", id, filename);
 	}
+
 }

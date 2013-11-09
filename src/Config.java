@@ -78,7 +78,10 @@ public class Config implements Serializable {
 		}
 		return ips;
 	}
-
+	
+	public String getNodeAddress(int nodeId) {
+		return participantIps[nodeId];
+	}
 	public int getFsPort() {
 		return fsPort;
 	}

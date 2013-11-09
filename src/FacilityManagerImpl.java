@@ -198,7 +198,8 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		boolean success = false;
 		try {
 			MapReduce440 mr = (MapReduce440) clazz.newInstance();
-			File outputBlock = fs.makeMappedFileBlock(filename, blockIndex, jobId);
+			File outputBlock = fs.makeMappedFileBlock(filename, blockIndex,
+					jobId);
 			Mapper440<?, ?, ?, ?> mapper = mr.createMapper();
 
 			// set necessary parameters
@@ -229,10 +230,10 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	public boolean runCombineJob(Set<Integer> blockIndices, String filename,
 			int jobId, int maxKey, int minKey, int numReducers)
 			throws RemoteException {
-		
+
 		boolean success = false;
 		Combiner440 combiner = new Combiner440();
-		
+
 		combiner.setMaster(master);
 		combiner.setFs(fs);
 		combiner.setJobId(jobId);
@@ -242,21 +243,30 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		combiner.setMaxKey(maxKey);
 		combiner.setMinKey(minKey);
 		combiner.setNumReducers(numReducers);
-		
+
 		try {
 			combiner.init();
 			success = true;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+
 		return success;
+	}
+	
+	@Override
+	public boolean distributePartitions(int jobId, String filename,
+			int[] reducers) throws RemoteException {
+		for (int partitionNo = 0; partitionNo < reducers.length; partitionNo++) {
+			String partitionPath = fs.createPartitionDataFilePath(filename, jobId, partitionNo);
+			fs.sendFile(partitionPath, config.getNodeAddress(reducers[partitionNo]));
+		}
+		return false;
 	}
 
 	@Override
-	public boolean runReduceJob(int jobId, Set<Integer> mapperIds,
-			int partitionNo) throws RemoteException {
-		// TODO Auto-generated method stub
+	public boolean runReduceJob(int jobId, String filename, int partitionNo,
+			int numMappers, Class<?> clazz) throws RemoteException {
 		return false;
 	}
 

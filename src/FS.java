@@ -162,6 +162,10 @@ public class FS {
 		}
 		return success;
 	}
+	
+	public boolean sendFile(String filenpath, String nodeAddress) {
+		BufferedReader reader = 
+	}
 
 	public boolean remoteWriteData(BufferedReader reader, int nodeId,
 			String namespace, int blockIndex, int numLines) {

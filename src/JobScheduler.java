@@ -51,7 +51,7 @@ public class JobScheduler {
 		System.out.println("Scheduler issuing job");
 		int jobId = totalJobs.getAndIncrement();
 		int numBlocks = blockLocations.size();
-		Job job = new Job(jobId, inputFile, numBlocks);
+		Job job = new Job(jobId, clazz, inputFile, numBlocks);
 		for (int blockIndex : blockLocations.keySet()) {
 			Set<Integer> nodeIds = blockLocations.get(blockIndex);
 			int minWork = Integer.MAX_VALUE;
@@ -149,7 +149,10 @@ public class JobScheduler {
 		boolean combinePhaseFinished = job.combineFinished(combinedBlocks);
 		if (combinePhaseFinished) {
 			System.out.println("Scheduler issuing reduces");
-			Map<Integer, Set<Integer>> blockLocations = master.getBlockLocations(job.getFilename());
+
+			// distribute reducers amongst participants
+			Map<Integer, Set<Integer>> blockLocations = master
+					.getBlockLocations(job.getFilename());
 			for (int blockIndex : blockLocations.keySet()) {
 				Set<Integer> nodeIds = blockLocations.get(blockIndex);
 				int minWork = Integer.MAX_VALUE;
@@ -171,28 +174,43 @@ public class JobScheduler {
 				job.addReducer(minWorker, blockIndex);
 				incrementActiveReduces(minWorker);
 			}
-		}
-		
-		System.out.println("Scheduled reducers");
-		activeJobs.put(jobId, job);
 
-		for (int blockIndex = 0; blockIndex < numBlocks; blockIndex++) {
-			int nodeId = job.getMapper(blockIndex);
-			System.out.println("Issued node " + nodeId + " with map for block "
-					+ blockIndex);
-			FacilityManager manager = master.getManager(nodeId);
-			boolean success = false;
-			try {
-				success = manager
-						.runMapJob(jobId, inputFile, blockIndex, clazz);
-			} catch (RemoteException e) {
-				e.printStackTrace();
+			// tell all mappers to send partitions to appropriate reducers
+			System.out.println("Telling mappers about reducer distribution");
+			Set<Integer> mappers = new HashSet<Integer>();
+			for (int mapperId : job.getMappers()) {
+				mappers.add(mapperId);
 			}
-			if (!success) {
-				// TODO: What happens here..?
+			for (int mapperId : mappers) {
+				try {
+					master.getManager(mapperId).distributePartitions(job.getId(),
+							job.getFilename(), job.getReducers());
+				} catch (RemoteException e) {
+					// TODO what happens here, error re do the mapper
+					e.printStackTrace();
+				}
 			}
+
+			// tell all reducers to await partitions and then reduce them
+			System.out.println("Scheduled reducers");
+			int numPartitions = blockLocations.size();
+			Class<?> clazz = job.getUserDefinedClass();
+			for (int partitionNo = 0; partitionNo < numPartitions; partitionNo++) {
+				nodeId = job.getReducer(partitionNo);
+				System.out.println("Issued node " + nodeId
+						+ " with reduce for partition " + partitionNo);
+				FacilityManager manager = master.getManager(nodeId);
+				boolean success = false;
+				try {
+					manager.runReduceJob(jobId, job.getFilename(), partitionNo, mappers.size(), clazz);
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+				if (!success) {
+					// TODO: What happens here..?
+				}
+			}
+			System.out.println("running map jobs");
 		}
-		System.out.println("running map jobs");
-		return jobId;
 	}
 }
