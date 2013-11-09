@@ -1,7 +1,4 @@
 import java.rmi.RemoteException;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 
 public class HealthChecker extends Thread {
 
@@ -9,7 +6,7 @@ public class HealthChecker extends Thread {
 	private FacilityManagerMasterImpl master;
 	private boolean[] healthy;
 	private int numParticipants;
-	
+
 	public HealthChecker(FacilityManagerMasterImpl master, int numParticipants) {
 		this.master = master;
 		this.numParticipants = numParticipants;

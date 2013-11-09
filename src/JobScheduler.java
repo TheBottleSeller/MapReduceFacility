@@ -1,5 +1,4 @@
 import java.rmi.RemoteException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -178,13 +177,11 @@ public class JobScheduler {
 
 		for (int blockIndex = 0; blockIndex < numBlocks; blockIndex++) {
 			int nodeId = job.getMapper(blockIndex);
-			System.out.println("Issued node " + nodeId + " with map for block "
-					+ blockIndex);
+			System.out.println("Issued node " + nodeId + " with map for block " + blockIndex);
 			FacilityManager manager = master.getManager(nodeId);
 			boolean success = false;
 			try {
-				success = manager
-						.runMapJob(jobId, inputFile, blockIndex, clazz);
+				success = manager.runMapJob(jobId, inputFile, blockIndex, clazz);
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
@@ -194,5 +191,14 @@ public class JobScheduler {
 		}
 		System.out.println("running map jobs");
 		return jobId;
+	}
+
+	public void reduceFinished(int nodeId, int jobId) {
+		Job job = activeJobs.get(jobId);
+		boolean reducePhaseFinished = job.reduceFinished();
+		if (reducePhaseFinished) {
+			System.out.println("TIME TO PUT THEM ALL TOGETHER!");
+			
+		}
 	}
 }
