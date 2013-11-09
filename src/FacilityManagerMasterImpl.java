@@ -1,6 +1,4 @@
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
 import java.rmi.AlreadyBoundException;
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -11,7 +9,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Scanner;
 import java.util.Set;
 
 public class FacilityManagerMasterImpl extends FacilityManagerImpl implements FacilityManagerMaster {
@@ -36,7 +33,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 		managers = new FacilityManager[expectedNumParticipants];
 		managers[getNodeId()] = this;
-		
+
 		rmiPort = config.getMrPort();
 
 		/* FILESYSTEM INIT */
@@ -124,7 +121,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		incrementCurrentNode();
 		return currentNode;
 	}
-	
+
 	@Override
 	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException {
 		Map<Integer, Set<Integer>> blocksToNodes = fsTable.get(namespace);
@@ -180,7 +177,8 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public void mapFinished(int jobId, int nodeId, int blockIndex, int maxKey, int minKey) throws RemoteException {
+	public void mapFinished(int jobId, int nodeId, int blockIndex, int maxKey, int minKey)
+		throws RemoteException {
 		System.out.println("Mapper finished for block " + blockIndex);
 		scheduler.mapFinished(jobId, nodeId, blockIndex, maxKey, minKey);
 	}
@@ -189,7 +187,12 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	public void combineFinished(int nodeId, int jobId, int blocksCombined) throws RemoteException {
 		scheduler.combineFinished(nodeId, jobId, blocksCombined);
 	}
-	
+
+	@Override
+	public void reduceFinished(int nodeId, int jobId) throws RemoteException {
+		scheduler.reduceFinished(nodeId, jobId);
+	}
+
 	public Map<Integer, Set<Integer>> getBlockLocations(String filename) {
 		return fsTable.get(filename);
 	}

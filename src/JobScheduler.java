@@ -1,5 +1,4 @@
 import java.rmi.RemoteException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -181,6 +180,7 @@ public class JobScheduler {
 			for (int mapperId : job.getMappers()) {
 				mappers.add(mapperId);
 			}
+			
 			for (int mapperId : mappers) {
 				try {
 					master.getManager(mapperId).distributePartitions(job.getId(),
@@ -211,6 +211,15 @@ public class JobScheduler {
 				}
 			}
 			System.out.println("running map jobs");
+		}
+	}
+
+	public void reduceFinished(int nodeId, int jobId) {
+		Job job = activeJobs.get(jobId);
+		boolean reducePhaseFinished = job.reduceFinished();
+		if (reducePhaseFinished) {
+			System.out.println("TIME TO PUT THEM ALL TOGETHER!");
+			
 		}
 	}
 }

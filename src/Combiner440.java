@@ -36,15 +36,13 @@ public class Combiner440 extends Thread {
 		partitionWriters = new HashMap<Integer, PrintWriter>(numReducers);
 		for (int i = 0; i < numReducers; i++) {
 			File partitionFile = fs.makePartitionFileBlock(filename, jobId, i);
-			partitionWriters.put(i, new PrintWriter(new FileOutputStream(
-					partitionFile)));
+			partitionWriters.put(i, new PrintWriter(new FileOutputStream(partitionFile)));
 		}
 
 		blockReaders = new HashMap<Integer, BufferedReader>(blockIndices.size());
 		for (Integer blockIndex : blockIndices) {
 			File blockFile = fs.getMappedFileBlock(filename, blockIndex, jobId);
-			blockReaders.put(blockIndex, new BufferedReader(new FileReader(
-					blockFile)));
+			blockReaders.put(blockIndex, new BufferedReader(new FileReader(blockFile)));
 		}
 	}
 
@@ -55,8 +53,8 @@ public class Combiner440 extends Thread {
 		PrintWriter partitionWriter;
 		for (Integer blockIndex : blockIndices) {
 			blockReader = blockReaders.get(blockIndex);
-			String key = null;
-			String value = null;
+			String key;
+			String value;
 			try {
 				while ((key = blockReader.readLine()) != null) {
 					value = blockReader.readLine();
@@ -82,9 +80,8 @@ public class Combiner440 extends Thread {
 		// Read in each partition into memory, sort, and write back to file
 		for (Integer partitionNo : partitionWriters.keySet()) {
 			try {
-				BufferedReader partitionReader = new BufferedReader(
-						new FileReader(fs.getPartitionFileBlock(filename,
-								jobId, partitionNo)));
+				BufferedReader partitionReader = new BufferedReader(new FileReader(
+					fs.getPartitionFileBlock(filename, jobId, partitionNo)));
 				String key = null;
 				String value = null;
 
@@ -105,9 +102,8 @@ public class Combiner440 extends Thread {
 				partitionReader.close();
 
 				// Write aggregate records to disk
-				partitionWriter = new PrintWriter(
-						new FileOutputStream(fs.makePartitionFileBlock(
-								filename, jobId, partitionNo)));
+				partitionWriter = new PrintWriter(new FileOutputStream(fs.makePartitionFileBlock(
+					filename, jobId, partitionNo)));
 				for (String aggregateKey : data.keySet()) {
 					List<String> values = data.get(aggregateKey);
 					partitionWriter.println(aggregateKey);
@@ -117,14 +113,14 @@ public class Combiner440 extends Thread {
 					}
 				}
 				partitionWriter.close();
-				
+
 			} catch (FileNotFoundException e) {
 				e.printStackTrace();
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
 		}
-		
+
 		// tell master that combine phase is done
 		try {
 			master.combineFinished(jobId, nodeId, blockIndices.size());

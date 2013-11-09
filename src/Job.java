@@ -1,6 +1,3 @@
-import java.util.HashMap;
-import java.util.Map;
-
 public class Job {
 
 	private int id;
@@ -28,7 +25,6 @@ public class Job {
 		maxKey = Integer.MIN_VALUE;
 		minKey = Integer.MAX_VALUE;
 	}
-	
 	public Class<?> getUserDefinedClass() {
 		return clazz;
 	}
@@ -36,7 +32,7 @@ public class Job {
 	public synchronized void addMapper(int nodeId, int blockIndex) {
 		mappers[blockIndex] = nodeId;
 	}
-	
+
 	public synchronized void addReducer(int nodeId, int partitionNo) {
 		reducers[partitionNo] = nodeId;
 	}
@@ -49,7 +45,6 @@ public class Job {
 		return mappers[blockIndex];
 	}
 	
-
 	public int getReducer(int partitionNo) {
 		return reducers[partitionNo];
 	}
@@ -64,32 +59,37 @@ public class Job {
 		this.minKey = Math.min(this.minKey, minKey);
 		return completedMaps == numBlocks;
 	}
-	
+
 	public boolean combineFinished(int blocksCombined) {
 		completedCombines += blocksCombined;
 		return completedCombines == numBlocks;
 	}
-	
+
+	public boolean reduceFinished() {
+		completedReduces++;
+		return completedReduces == numBlocks;
+	}
+
 	public int getId() {
 		return id;
 	}
-	
+
 	public String getFilename() {
 		return filename;
 	}
-	
+
 	public int getMaxKey() {
 		return maxKey;
 	}
-	
+
 	public int getMinKey() {
 		return minKey;
 	}
-	
+
 	public int getNumBlocks() {
 		return numBlocks;
 	}
-	
+
 	@Override
 	public String toString() {
 		return String.format("id=%d file=%s", id, filename);
