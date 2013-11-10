@@ -13,6 +13,7 @@ import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.net.UnknownHostException;
 import java.rmi.RemoteException;
 import java.util.Collections;
 import java.util.HashMap;
@@ -24,6 +25,10 @@ public class FS {
 
 	private static final String DATA_PATH = "data440/";
 	private static final String CLASS_PATH = "class440/";
+	
+	private static final String MAPPED_TYPE = "mapped";
+	private static final String PARTITION_TYPE = "partition";
+	private static final String REDUCED_TYPE = "reduced";
 
 	private static int WRITE_PORT = 8083;
 	private static int READ_PORT = 8084;
@@ -34,9 +39,14 @@ public class FS {
 	private FacilityManagerMaster master;
 	private int blockSize;
 	private WriteServer writeServer;
+	private ReadServer readServer;
 
 	private enum Messages {
 		WRITE_DATA, WRITE_CLASS, WRITE_PARTITION
+	};
+	
+	private enum FileType {
+		USER_DATA, MAPPED, PARTITION, REDUCED
 	};
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
@@ -47,7 +57,9 @@ public class FS {
 		blockSize = manager.getConfig().getBlockSize();
 		writeServer = new WriteServer();
 		writeServer.start();
-
+		readServer = new ReadServer();
+		readServer.start();
+		
 		// Set up root directories.
 		createRootDirectory(DATA_PATH);
 		createRootDirectory(CLASS_PATH);
@@ -55,6 +67,10 @@ public class FS {
 
 	public String getRoot() {
 		return System.getProperty("user.home") + "/";
+	}
+	
+	public String getDataRoot() {
+		return getRoot() + DATA_PATH;
 	}
 
 	private void createRootDirectory(String path) {
@@ -153,6 +169,52 @@ public class FS {
 			writer.close();
 			addToLocalFiles(namespace, blockIndex);
 			success = true;
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return success;
+	}
+	
+	public boolean getFile(String filename, int jobId, FileType type, int partNo, int fromNode) {
+		String requestedFilename = createFilename(filename, jobId, type, partNo, fromNode);
+		File localFile = new File(getDataRoot() + requestedFilename);
+		if (localFile.exists()) {
+			localFile.delete();
+		}
+		boolean success = false;
+		try {
+			localFile.createNewFile();
+			String nodeAddress = manager.getConfig().getNodeAddress(fromNode);
+			FileOutputStream fos = new FileOutputStream(localFile);
+			
+			Socket socket = new Socket(nodeAddress, READ_PORT);
+			
+			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+			out.flush();
+			
+			// TODO MAY NEED TO BE SYCHRONIZED
+			out.writeUTF(requestedFilename);
+			out.flush();
+			
+			boolean hasFile = in.readBoolean();
+			
+			if (hasFile) {
+				int numBytes = 0;
+				while ((numBytes = in.readInt()) != -1) {
+					byte[] bytes = new byte[numBytes];
+					in.read(bytes);
+					fos.write(bytes);
+				}
+				fos.flush();
+				fos.close();
+				
+				success = true;
+			}
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (UnknownHostException e) {
+			e.printStackTrace();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -286,7 +348,7 @@ public class FS {
 
 	public File makePartitionFileBlock(String filename, int jobId, int partitionNo)
 		throws IOException {
-		File partition = new File(createPartitionDataFilePath(filename, jobId, partitionNo));
+		File partition = new File(createPartitionDataFilePath(filename, jobId, partitionNo, manager.getNodeId()));
 		if (partition.exists()) {
 			partition.delete();
 		}
@@ -294,8 +356,8 @@ public class FS {
 		return partition;
 	}
 
-	public File getPartitionFileBlock(String filename, int jobId, int partitionNo) {
-		return new File(createPartitionDataFilePath(filename, jobId, partitionNo));
+	public File getPartitionFileBlock(String filename, int jobId, int partitionNo) throws RemoteException {
+		return new File(createPartitionDataFilePath(filename, jobId, partitionNo, manager.getNodeId()));
 	}
 
 	public File makeReduceInputFile(String filename, int jobId, int partitionNum)
@@ -488,31 +550,80 @@ public class FS {
 		return partitionFiles.get(jobId);
 	}
 
-	public class Reader {
+	public class ReadServer extends Thread {
 
-		public Reader() {
+		private ServerSocket serverSocket;
 
+		public ReadServer() throws IOException {
+			serverSocket = new ServerSocket(READ_PORT);
+		}
+
+		@Override
+		public void run() {
+			while (true) {
+				try {
+					Socket socket = serverSocket.accept();
+					new ReaderWorker(socket).start();
+				} catch (IOException e) {
+					// Ignore and keep listening.
+				}
+			}
+		}
+
+		public class ReaderWorker extends Thread {
+			private Socket socket;
+
+			public ReaderWorker(Socket socket) {
+				this.socket = socket;
+			}
+
+			public void run() {
+				try {
+					ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+					ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
+					
+					String filename = in.readUTF();
+					
+					File localFile = new File(getDataRoot() + filename);
+					
+					if (!localFile.exists()) {
+						out.writeBoolean(false);
+						return;
+					}
+					out.writeBoolean(true);
+					
+					FileInputStream fin = new FileInputStream(localFile);
+					
+					byte[] bytes = new byte[1024];
+					int numBytesRead = 0;
+					while ((numBytesRead = fin.read(bytes)) != -1) {
+						out.writeInt(numBytesRead);
+						out.write(bytes);
+					}
+					out.writeInt(numBytesRead);
+					fin.close();
+				} catch (IOException e) {
+					e.printStackTrace();
+				}
+			}
 		}
 
 	}
 
 	public String createDataFilePath(String filename, int blockIndex) {
-		return String.format("%s%s%s-%d.pt", getRoot(), DATA_PATH, filename, blockIndex);
+		return getDataRoot() + String.format("%s-%d.pt", filename, blockIndex);
 	}
 
 	public String createMappedDataFilePath(String filename, int jobId, int blockIndex) {
-		return String.format("%s%s%s-jobId-%d-%d.tmp", getRoot(), DATA_PATH, filename, jobId,
-			blockIndex);
+		return getDataRoot() + createMappedDataFilename(filename, jobId, blockIndex);
 	}
 
-	public String createPartitionDataFilePath(String filename, int jobId, int partitionNo) {
-		return String.format("%s%s%s-jobId-%d-part-%d", getRoot(), DATA_PATH, filename, jobId,
-			partitionNo);
+	public String createPartitionDataFilePath(String filename, int jobId, int partitionNo, int nodeId) {
+		return getDataRoot() + createPartitionDataFilename(filename, jobId, partitionNo, nodeId);
 	}
 
 	public String createReducerInputFilePath(String filename, int jobId, int partitionNo) {
-		return String.format("%s%s%s-jobId-%d-full-part-%d", getRoot(), DATA_PATH, filename, jobId,
-			partitionNo);
+		return getDataRoot() + createReducerInputFilename(filename, jobId, partitionNo);
 	}
 
 	public String createClassFilePath(String filename) {
@@ -521,6 +632,37 @@ public class FS {
 
 	public String createReduceOutputFilePath(int jobId, String filename,
 			int nodeId) {
-		return String.format("%s%s%s-jobId-%d-%d", getRoot(), DATA_PATH, filename, jobId, nodeId);
+		return getDataRoot() + createReduceOutputFilename(jobId, filename, nodeId);
+	}
+	
+	public String createFilename(String filename, int jobId, FileType type, int partNo, int nodeId) {
+		return String.format("%s-%s-jobId-%d-part-%d-node-%d", filename, type.toString(), partNo, nodeId);
+	}
+	
+	public String createFilename(String filename, int jobId, String fileType, int nodeId) {
+		return String.format("%s-%s-jobId-%d-node-%d", filename, fileType, nodeId);
+	}
+	
+	public String createReducerInputFilename(String filename, int jobId, int partitionNo) {
+		return String.format("%s-%s-jobId-%d-part-%d", getRoot(), DATA_PATH, filename, jobId,
+			partitionNo);
+	}
+	
+	public String createReduceOutputFilename(int jobId, String filename, int nodeId) {
+		return String.format("%s-%s-jobId-%d-%d", filename, REDUCED_TYPE, jobId, nodeId);
+	}
+	
+	public String createMappedDataFilename(String filename, int jobId, int blockIndex) {
+		return String.format("%s-%s-jobId-%d-%d", filename, MAPPED_TYPE, jobId,
+			blockIndex);
+	}
+
+	public String createPartitionDataFilename(String filename, int jobId, int partitionNo, int nodeId) {
+		return String.format("%s-%s-jobId-%d-part-%d-%d", filename, PARTITION_TYPE, jobId,
+			partitionNo, nodeId);
+	}
+	
+	public String createClassFilename(String filename) {
+		return String.format("%s.class", filename);
 	}
 }

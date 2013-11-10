@@ -254,7 +254,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		boolean success = true;
 		for (int partitionNo = 0; partitionNo < reducers.length; partitionNo++) {
 			String partitionPath = fs.createPartitionDataFilePath(filename,
-					jobId, partitionNo);
+					jobId, partitionNo, getNodeId());
 			String remoteFilename = String.format("%s-jobId-%d-part-%d-%d",
 					filename, jobId, partitionNo, getNodeId());
 			try {
@@ -306,7 +306,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	@Override
 	public void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
 		throws FileNotFoundException {
-		fs.sendFile(localFilepath, remoteFilename, nodeAddress);
+		//fs.sendFile(localFilepath, remoteFilename, nodeAddress);
 	}
 
 }
