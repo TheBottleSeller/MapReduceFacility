@@ -243,10 +243,8 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			Reducer440<?, ?, ?, ?> reducer = mr.createReducer();
 
 			reducer.setMaster(master);
-			reducer.setManager(this);
 			reducer.setFS(fs);
 			reducer.setReduceJob(job);
-			reducer.setNodeId(getNodeId());
 
 			reducer.start();
 			success = true;

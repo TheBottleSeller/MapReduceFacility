@@ -21,16 +21,19 @@ public class WordCountTest extends MapReduce440 {
 
 		@Override
 		public KVPair<String, Integer> reduce(
-				KVPair<String, List<Integer>> input) {
+				KVPair<String, List<String>> input) {
 			String word = input.getKey();
-			List<Integer> counts = input.getValue();
+			List<String> countString = input.getValue();
+			List<Integer> counts = new ArrayList<Integer>(countString.size());
+			for (String count : countString) {
+				counts.add(Integer.parseInt(count));
+			}
 			int total = 0;
 			for (int c : counts) {
 				total += c;
 			}
 			return new KVPair<String, Integer>(word, total);
 		}
-
 	}
 
 	@Override
