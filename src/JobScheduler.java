@@ -44,6 +44,21 @@ public class JobScheduler {
 	public synchronized void incrementActiveReduces(int nodeId) {
 		activeReduces[nodeId].incrementAndGet();
 	}
+	
+	public int findMinWorker(Set<Integer> nodeIds) {
+		int minWork = Integer.MAX_VALUE;
+		int minWorker = -1;
+		for (int nodeId : nodeIds) {
+			if (master.isNodeHealthy(nodeId)) {
+				int work = getNumMappers(nodeId) + getNumReducers(nodeId);
+				if (work < minWork) {
+					minWork = work;
+					minWorker = nodeId;
+				}
+			}
+		}
+		return minWorker;
+	}
 
 	public int issueJob(Class<?> clazz, String inputFile, Map<Integer, Set<Integer>> blockLocations) {
 		System.out.println("Scheduler issuing job");
@@ -51,18 +66,7 @@ public class JobScheduler {
 		int numBlocks = blockLocations.size();
 		Job job = new Job(jobId, clazz, inputFile, numBlocks);
 		for (int blockIndex : blockLocations.keySet()) {
-			Set<Integer> nodeIds = blockLocations.get(blockIndex);
-			int minWork = Integer.MAX_VALUE;
-			int minWorker = -1;
-			for (int nodeId : nodeIds) {
-				if (master.isNodeHealthy(nodeId)) {
-					int work = getNumMappers(nodeId) + getNumReducers(nodeId);
-					if (work < minWork) {
-						minWork = work;
-						minWorker = nodeId;
-					}
-				}
-			}
+			int minWorker = findMinWorker(blockLocations.get(blockIndex)); 
 			if (minWorker == -1) {
 				System.out.println("Could not find worker for block " + blockIndex);
 				return -1;
@@ -132,7 +136,7 @@ public class JobScheduler {
 		}
 	}
 
-	public void combineFinished(int jobId, int nodeId, int combinedBlocks) {
+	public void combineFinished(int jobId, int combinedBlocks) {
 		if (combinedBlocks < 1) {
 			// TODO handle this case
 			return;
@@ -145,20 +149,10 @@ public class JobScheduler {
 			// distribute reducers amongst participants
 			Map<Integer, Set<Integer>> blockLocations = master.getBlockLocations(job.getFilename());
 			for (int blockIndex : blockLocations.keySet()) {
-				Set<Integer> nodeIds = blockLocations.get(blockIndex);
-				int minWork = Integer.MAX_VALUE;
-				int minWorker = -1;
-				for (int id : nodeIds) {
-					if (master.isNodeHealthy(id)) {
-						int work = getNumMappers(id) + getNumReducers(id);
-						if (work < minWork) {
-							minWork = work;
-							minWorker = id;
-						}
-					}
-				}
+				int minWorker = findMinWorker(blockLocations.get(blockIndex)); 
 				if (minWorker == -1) {
 					System.out.println("Could not find worker for block " + blockIndex);
+					// TODO: Reset minWorker by transferring block...
 				}
 				System.out.println("Found worker " + minWorker);
 				job.addReducer(minWorker, blockIndex);
@@ -177,7 +171,7 @@ public class JobScheduler {
 			int numPartitions = blockLocations.size();
 			Class<?> clazz = job.getUserDefinedClass();
 			for (int partitionNo = 0; partitionNo < numPartitions; partitionNo++) {
-				nodeId = job.getReducer(partitionNo);
+				int nodeId = job.getReducer(partitionNo);
 				System.out.println("Issued node " + nodeId + " with reduce for partition "
 					+ partitionNo);
 				FacilityManager manager = master.getManager(nodeId);
@@ -195,37 +189,26 @@ public class JobScheduler {
 		}
 	}
 
-	public void reduceFinished(int nodeId, int jobId) throws FileNotFoundException, RemoteException {
+	public void reduceFinished(int jobId) throws FileNotFoundException, RemoteException {
 		Job job = activeJobs.get(jobId);
 		boolean reducePhaseFinished = job.reduceFinished();
 		if (reducePhaseFinished) {
 			System.out.println("Start combining reduces.");
 
 			// Find minimum worker.
-			int minWork = Integer.MAX_VALUE;
-			int minWorker = -1;
+			Set<Integer> allNodeIds = new HashSet<Integer>(activeMaps.length);
 			for (int id = 0; id < activeMaps.length; id++) {
-				if (master.isNodeHealthy(id)) {
-					int work = getNumMappers(id) + getNumReducers(id);
-					if (work < minWork) {
-						minWork = work;
-						minWorker = id;
-					}
-				}
+				allNodeIds.add(id);
 			}
+			int minWorker = findMinWorker(allNodeIds);
 			if (minWorker == -1) {
 				System.out.println("Could not find worker to combine reduces.");
-			} else {
-				System.out.println("Found worker to combine reducers: " + minWorker);
+				// TODO: Wait? 
 			}
-
-			// Send files to minimum worker.
-			for (int reducerId : job.getReducers()) {
-				master.getManager(reducerId).sendFile("", "", master.getParticipantIp(minWorker));
-			}
-
-			// Combine the files and upload the result.
-			master.getManager(minWorker).combineReduces(); 
+			System.out.println("Found worker to combine reduces: " + minWorker);
+			
+			// Gather reduction files, combine them, and upload the results.
+			master.getManager(minWorker).combineReduces(job);
 		}
 	}
 }

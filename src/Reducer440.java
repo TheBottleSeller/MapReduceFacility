@@ -73,7 +73,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 			}
 			writer.close();
 			reader.close();
-			master.reduceFinished(jobId, nodeId);
+			master.reduceFinished(jobId);
 		} catch (IOException e) {
 			e.printStackTrace();
 		}

@@ -42,7 +42,7 @@ public class FS {
 	};
 
 	public enum FileType {
-		USER_DATA, MAPPED, PARTITION, REDUCER_IN, REDUCER_OUT
+		USER_DATA, MAPPED, PARTITION, REDUCER_IN, REDUCER_OUT, OUTPUT
 	};
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
