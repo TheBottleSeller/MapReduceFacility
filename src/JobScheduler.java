@@ -1,8 +1,10 @@
 import java.io.FileNotFoundException;
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -10,21 +12,24 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JobScheduler {
 
 	private FacilityManagerMasterImpl master;
-	private Map<Integer, Job> activeJobs;
-	private Map<Integer, Job> completedJobs;
+	private Map<Integer, MapReduceJob> activeJobs;
+	private Map<Integer, MapReduceJob> completedJobs;
 	private AtomicInteger[] activeMaps;
 	private AtomicInteger[] activeReduces;
 	private AtomicInteger totalJobs;
+	private Map<Integer, Set<NodeJob>> activeNodeJobs;
 
 	public JobScheduler(FacilityManagerMasterImpl master, int numParticipants) {
 		this.master = master;
-		activeJobs = Collections.synchronizedMap(new HashMap<Integer, Job>());
-		completedJobs = Collections.synchronizedMap(new HashMap<Integer, Job>());
+		activeJobs = Collections.synchronizedMap(new HashMap<Integer, MapReduceJob>());
+		completedJobs = Collections.synchronizedMap(new HashMap<Integer, MapReduceJob>());
 		activeMaps = new AtomicInteger[numParticipants];
 		activeReduces = new AtomicInteger[numParticipants];
+		activeNodeJobs = Collections.synchronizedMap(new HashMap<Integer, Set<NodeJob>>());
 		for (int i = 0; i < numParticipants; i++) {
 			activeMaps[i] = new AtomicInteger(0);
 			activeReduces[i] = new AtomicInteger(0);
+			activeNodeJobs.put(i, new HashSet<NodeJob>());
 		}
 		totalJobs = new AtomicInteger(0);
 	}
@@ -64,7 +69,7 @@ public class JobScheduler {
 		System.out.println("Scheduler issuing job");
 		int jobId = totalJobs.getAndIncrement();
 		int numBlocks = blockLocations.size();
-		Job job = new Job(jobId, clazz, inputFile, numBlocks);
+		MapReduceJob job = new MapReduceJob(jobId, clazz, inputFile, numBlocks);
 		for (int blockIndex : blockLocations.keySet()) {
 			int minWorker = findMinWorker(blockLocations.get(blockIndex)); 
 			if (minWorker == -1) {
@@ -84,7 +89,9 @@ public class JobScheduler {
 			FacilityManager manager = master.getManager(nodeId);
 			boolean success = false;
 			try {
-				success = manager.runMapJob(jobId, inputFile, blockIndex, clazz);
+				MapJob mapJob = job.createMapJob(blockIndex);
+				activeNodeJobs.get(nodeId).add(mapJob);
+				success = manager.runMapJob(mapJob);
 			} catch (RemoteException e) {
 				e.printStackTrace();
 			}
@@ -100,7 +107,7 @@ public class JobScheduler {
 		boolean mapPhaseFinished = activeJobs.get(jobId).mapFinished(maxKey, minKey);
 		if (mapPhaseFinished) {
 			// Start combine phase on all of the mappers
-			Job job = activeJobs.get(jobId);
+			MapReduceJob job = activeJobs.get(jobId);
 			Map<Integer, Set<Integer>> nodeToBlocks = new HashMap<Integer, Set<Integer>>(
 				job.getNumBlocks());
 			for (int i = 0; i < job.getNumBlocks(); i++) {
@@ -141,7 +148,7 @@ public class JobScheduler {
 			// TODO handle this case
 			return;
 		}
-		Job job = activeJobs.get(jobId);
+		MapReduceJob job = activeJobs.get(jobId);
 		boolean combinePhaseFinished = job.combineFinished(combinedBlocks);
 		if (combinePhaseFinished) {
 			System.out.println("Scheduler issuing reduces");
@@ -190,7 +197,7 @@ public class JobScheduler {
 	}
 
 	public void reduceFinished(int jobId) throws FileNotFoundException, RemoteException {
-		Job job = activeJobs.get(jobId);
+		MapReduceJob job = activeJobs.get(jobId);
 		boolean reducePhaseFinished = job.reduceFinished();
 		if (reducePhaseFinished) {
 			System.out.println("Start combining reduces.");

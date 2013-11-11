@@ -1,4 +1,9 @@
-public class Job {
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+public class MapReduceJob {
 
 	private int id;
 	private String filename;
@@ -9,10 +14,11 @@ public class Job {
 	private int completedMaps;
 	private int completedCombines;
 	private int completedReduces;
+	private Map<Integer, List<NodeJob>> activeJobs;
 	private int maxKey;
 	private int minKey;
 
-	public Job(int id, Class<?> clazz, String filename, int numBlocks) {
+	public MapReduceJob(int id, Class<?> clazz, String filename, int numBlocks) {
 		this.id = id;
 		this.filename = filename;
 		this.clazz = clazz;
@@ -25,8 +31,9 @@ public class Job {
 		maxKey = Integer.MIN_VALUE;
 		minKey = Integer.MAX_VALUE;
 	}
-	public Class<?> getUserDefinedClass() {
-		return clazz;
+	
+	public MapJob createMapJob(int blockIndex) {
+		return new MapJob(id, filename, blockIndex, clazz);
 	}
 	
 	public synchronized void addMapper(int nodeId, int blockIndex) {
@@ -68,6 +75,10 @@ public class Job {
 	public boolean reduceFinished() {
 		completedReduces++;
 		return completedReduces == numBlocks;
+	}
+	
+	public Class<?> getUserDefinedClass() {
+		return clazz;
 	}
 
 	public int getId() {

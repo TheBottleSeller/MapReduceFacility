@@ -10,11 +10,9 @@ import java.util.List;
 public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 
 	private FacilityManagerMaster master;
-	private File inBlock;
-	private File outBlock;
-	int jobId;
-	int nodeId;
-	int blockIndex;
+	private FS fs;
+	private MapJob mapJob;
+	private int nodeId;
 
 	private BufferedReader reader;
 	private PrintWriter writer;
@@ -57,6 +55,10 @@ public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 	
 	public void setMaster(FacilityManagerMaster master) {
 		this.master = master;
+	}
+	
+	public void setFS(FS fs) {
+		
 	}
 
 	public void setInBlock(File inBlock) {
