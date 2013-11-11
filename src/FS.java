@@ -391,6 +391,25 @@ public class FS {
 		return null;
 	}
 
+	public File makeReduceOutputFile(String filename, int jobId, int partitionNum)
+		throws IOException {
+		File partition = new File(createReducerOutputFilePath(filename, jobId, partitionNum));
+		if (partition.exists()) {
+			partition.delete();
+		}
+		partition.createNewFile();
+		return partition;
+	}
+
+	public File getReduceOutputFile(String filename, int jobId, int partitionNum) {
+		try {
+			return new File(createReducerOutputFilePath(filename, jobId, partitionNum));
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
 	private int getNumLines(File file) throws IOException {
 		InputStream is = new BufferedInputStream(new FileInputStream(file));
 		try {
@@ -644,10 +663,21 @@ public class FS {
 		return getDataRoot()
 			+ createReducerInputFilename(filename, jobId, partitionNo, manager.getNodeId());
 	}
+	
+	public String createReducerOutputFilePath(String filename, int jobId, int partitionNo)
+		throws RemoteException {
+		return getDataRoot()
+			+ createReducerOutputFilename(filename, jobId, partitionNo, manager.getNodeId());
+	}
 
 	private String createReducerInputFilename(String filename, int jobId, int partitionNo,
 		int nodeId) {
 		return createFilename(filename, jobId, FileType.REDUCER_IN, partitionNo, nodeId);
+	}
+	
+	private String createReducerOutputFilename(String filename, int jobId, int partitionNo,
+		int nodeId) {
+		return createFilename(filename, jobId, FileType.REDUCER_OUT, partitionNo, nodeId);
 	}
 
 	public String createClassFilePath(String filename) {

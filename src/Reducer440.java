@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -24,9 +25,6 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 	private int nodeId;
 	private Set<File> partitionFiles;
 
-	private BufferedReader reader;
-	private PrintWriter writer;
-
 	public abstract KVPair<Kout, Vout> reduce(KVPair<String, List<Vin>> input);
 
 	@Override
@@ -34,49 +32,12 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 		// gather files blocks while partition files are obtained
 		partitionFiles = gatherFiles();
 
-		File inPart = mergeSortPartitions(partitionFiles);
-
-		PrintWriter writer;
-		try {
-			writer = new PrintWriter(new FileOutputStream(inPart));
-
-		} catch (FileNotFoundException e1) {
-			e1.printStackTrace();
-		}
-		// TODO STOPPED HERE
-
-		String line;
-		String key;
-		int numValues;
-		List<Vin> values = new ArrayList<Vin>();
-		try {
-			readLines: while ((key = reader.readLine()) != null) {
-				line = reader.readLine();
-				if (line == null) {
-					continue;
-				}
-
-				numValues = Integer.parseInt(line);
-				for (int i = 0; i < numValues; i++) {
-					line = reader.readLine();
-					if (line == null) {
-						continue readLines;
-					}
-					values.add((Vin) reader.readLine());
-				}
-
-				System.out.print("key = " + key + ", values = " + values.toArray());
-
-				KVPair<Kout, Vout> reduction = reduce(new KVPair<String, List<Vin>>(key, values));
-				writer.write(reduction.getKey() + "\n");
-				writer.write(reduction.getValue() + "\n");
-			}
-			writer.close();
-			reader.close();
-			master.reduceFinished(jobId, nodeId);
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		File reduceInput = mergeSortPartitions(partitionFiles);
+		
+		boolean success = false;
+		runReduce(reduceInput);
+		
+		master.reduceFinished(job.getJobId(), nodeId);
 	}
 
 	private Set<File> gatherFiles() {
@@ -116,7 +77,6 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 		// create partition readers
 		Map<File, BufferedReader> readers = new HashMap<File, BufferedReader>(partitionFiles.size());
 		final Map<File, KVPairs<String, String>> currentKVPairs = new HashMap<File, KVPairs<String, String>>(partitionFiles.size());
-		String key = "";
 		String minKey = null;
 		for (File partition : partitionFiles) {
 			
@@ -126,15 +86,20 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 			if (pairs == null) {
 				partitionFiles.remove(partition);
 				reader.close();
+				continue;
 			}
 			if (minKey == null) {
-				minKey = key;
+				minKey = pairs.getKey();
 			}
-			if (minKey.compareTo(key) == 1) {
-				minKey = key;
+			if (minKey.compareTo(pairs.getKey()) == 1) {
+				minKey = pairs.getKey();
 			}
 			
 			currentKVPairs.put(partition, pairs);
+		}
+		
+		if (minKey == null) {
+			return mergedFile;
 		}
 		
 		SortedSet<File> lowestKeys = new TreeSet<File>(new Comparator<File>() {
@@ -148,28 +113,74 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 			
 		});
 		
+		// add the files to the sorted set by current kv pair
+		for (File partition : partitionFiles) {
+			lowestKeys.add(partition);
+		}
+		
 		KVPairs<String, String> currentMin = new KVPairs<String, String>(minKey, new ArrayList<String>());
+		
 		while (!lowestKeys.isEmpty()) {
+			// pull out file with lowest current kv pair and remove from sorted set
 			File lowestFile = lowestKeys.first();
 			lowestKeys.remove(lowestFile);
-			KVPairs<String, String> pair = currentKVPairs.get(lowestFile);
+			
+			// get files current kvpair and reader
+			KVPairs<String, String> pair = currentKVPairs.remove(lowestFile);
+			BufferedReader reader = readers.get(lowestFile);
+			
+			// merge the kvpair and currentMin pair if keys are equal
 			if (pair.getKey().equals(currentMin.getKey())) {
 				currentMin.addValues(pair.getValue());
-				lowestKeys.add(lowestFile);
-				lowes
 			} else {
-				mergedWriter.println()
+				// print the currentMin key to merged file
+				mergedWriter.println(currentMin.getKey());
+				mergedWriter.println(currentMin.getValue().size());
+				for (String v : currentMin.getValue()) {
+					mergedWriter.println(v);
+				}
+				
+				// set the currentMin to the previously read kvpair
+				currentMin = pair;
+			}
+			
+			// read next pair for lowestFile and add back to set if appropriate
+			KVPairs<String, String> nextPair = readKVPairs(reader);
+			if (nextPair != null) {
+				currentKVPairs.put(lowestFile, nextPair);
+				lowestKeys.add(lowestFile);
+			} else {
+				reader.close();
 			}
 		}
-		while (currentPair != null) {
-			for (File partition : partitionFiles) {
-				BufferedReader reader = readers.get(partition);
-				KVPair<String, String> pair = currentKVPairs.get(partition);
-				if (pair.getKey().compareTo(oai)
-			}
+		
+		// print the currentMin key to merged file
+		mergedWriter.println(currentMin.getKey());
+		mergedWriter.println(currentMin.getValue().size());
+		for (String v : currentMin.getValue()) {
+			mergedWriter.println(v);
 		}
-		// run merge sort
+		
+		mergedWriter.close();
+		
 		return mergedFile;
+	}
+	
+	public void runReduce(File reduceInput) {
+		File reducerOutput = fs.makeReduceOutputFile(job.getFilename(), job.getJobId(), job.getPartitionNum());
+		PrintWriter writer  = new PrintWriter(new FileOutputStream(reducerOutput));
+		BufferedReader reader = new BufferedReader(new FileReader(reduceInput));
+		KVPairs<String, String> kvpairs;
+		while ((kvpairs = readKVPairs(reader)) != null) {
+			System.out.print("key = " + kvpairs.getKey() + ", values = " + Arrays.toString(kvpairs.getValue().toArray()));
+			
+			KVPair<Kout, Vout> reduction = reduce(kvpairs);
+			
+			writer.write(reduction.getKey() + "\n");
+			writer.write(reduction.getValue() + "\n");
+		}
+		writer.close();
+		reader.close();
 	}
 	
 	
