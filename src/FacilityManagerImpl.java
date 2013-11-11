@@ -212,7 +212,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		int minKey, int numReducers) throws RemoteException {
 
 		boolean success = false;
-		Combiner440 combiner = new Combiner440();
+		MapCombiner440 combiner = new MapCombiner440();
 
 		combiner.setMaster(master);
 		combiner.setFs(fs);
@@ -260,7 +260,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 	@Override
 	public boolean combineReduces(final Job job) throws RemoteException {
-		// Get reduceFiles.
+		// Gather reduceFiles.
 		final Set<File> reduceFiles = new HashSet<File>();
 		
 		for (final int partitionNo : job.getReducers()) {
@@ -289,8 +289,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		// Combine reduceFiles.
 		
 		
-		
-		// Combine shit.
+		// Upload final output file.
 		uploadCmd("");
 		return false;
 	}
