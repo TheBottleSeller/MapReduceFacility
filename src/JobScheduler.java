@@ -193,8 +193,7 @@ public class JobScheduler {
 				FacilityManager manager = master.getManager(nodeId);
 				boolean success = false;
 				try {
-					manager.runReduceJob(jobId, job.getFilename(), partitionNo, mappers.size(),
-						clazz);
+					manager.runReduceJob(new ReduceJob(jobId, job.getFilename(), partitionNo, mappers, clazz));
 				} catch (RemoteException e) {
 					e.printStackTrace();
 				}

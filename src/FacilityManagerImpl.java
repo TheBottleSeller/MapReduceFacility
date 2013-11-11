@@ -269,28 +269,24 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runReduceJob(int jobId, String filename, int partitionNo,
-			int numMappers, Class<?> clazz) throws RemoteException {
+	public boolean runReduceJob(ReduceJob job) throws RemoteException {
 		boolean success = false;
 		MapReduce440 mr;
 		try {
-			mr = (MapReduce440) clazz.newInstance();
+			mr = (MapReduce440) job.getClazz().newInstance();
 			Reducer440<?, ?, ?, ?> reducer = mr.createReducer();
 			
-			File outBlock = new File(fs.createReduceOutputFilePath(jobId, filename, getNodeId()));
-			
 			reducer.setMaster(master);
+			reducer.setManager(this);
 			reducer.setFS(fs);
-			reducer.setJobId(jobId);
+			reducer.setReduceJob(job);
 			reducer.setNodeId(getNodeId());
-			reducer.setOutBlock(outBlock);
 			
+			reducer.start();
 			success = true;
 		} catch (InstantiationException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return success;

@@ -1,6 +1,6 @@
 public class KVPair<K, V> {
 	private K key;
-	private V value;
+	protected V value;
 
 	public KVPair(K key, V value) {
 		this.key = key;

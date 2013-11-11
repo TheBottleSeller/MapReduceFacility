@@ -24,8 +24,7 @@ public interface FacilityManager extends Remote {
 	public boolean distributePartitions(int jobId, String filename, int[] reducers)
 		throws RemoteException;
 
-	public boolean runReduceJob(int jobId, String filename, int partitionNo, int numMappers,
-		Class<?> clazz) throws RemoteException;
+	public boolean runReduceJob(ReduceJob job) throws RemoteException;
 
 	void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
 		throws FileNotFoundException, RemoteException;
