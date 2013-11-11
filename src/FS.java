@@ -42,7 +42,7 @@ public class FS {
 	};
 
 	public enum FileType {
-		USER_DATA, MAPPED, PARTITION, REDUCER_IN, REDUCER_OUT, OUTPUT
+		USER_DATA, MAPPED, PARTITION, REDUCER_IN, REDUCER_OUT, FINAL_OUTPUT
 	};
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
@@ -409,7 +409,25 @@ public class FS {
 		}
 		return null;
 	}
-	
+
+	public File makeFinalOutputFile(String filename, int jobId) throws IOException {
+		File output = new File(createFinalOutputFilePath(filename, jobId));
+		if (output.exists()) {
+			output.delete();
+		}
+		output.createNewFile();
+		return output;
+	}
+
+	public File getFinalOutputFile(String filename, int jobId) {
+		try {
+			return new File(createFinalOutputFilePath(filename, jobId));
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+
 	private int getNumLines(File file) throws IOException {
 		InputStream is = new BufferedInputStream(new FileInputStream(file));
 		try {
@@ -643,6 +661,8 @@ public class FS {
 
 	}
 
+	// TODO: REFACTOR THIS!!!
+
 	public String createDataFilePath(String filename, int blockIndex) {
 		return getDataRoot() + String.format("%s-%d.pt", filename, blockIndex);
 	}
@@ -663,18 +683,26 @@ public class FS {
 		return getDataRoot()
 			+ createReducerInputFilename(filename, jobId, partitionNo, manager.getNodeId());
 	}
-	
+
 	public String createReducerOutputFilePath(String filename, int jobId, int partitionNo)
 		throws RemoteException {
 		return getDataRoot()
 			+ createReducerOutputFilename(filename, jobId, partitionNo, manager.getNodeId());
 	}
 
+	public String createFinalOutputFilePath(String filename, int jobId) throws RemoteException {
+		return getDataRoot() + createFinalOutputFilename(filename, jobId);
+	}
+
+	private String createFinalOutputFilename(String filename, int jobId) {
+		return createFilename(filename, jobId, FileType.FINAL_OUTPUT);
+	}
+
 	private String createReducerInputFilename(String filename, int jobId, int partitionNo,
 		int nodeId) {
 		return createFilename(filename, jobId, FileType.REDUCER_IN, partitionNo, nodeId);
 	}
-	
+
 	private String createReducerOutputFilename(String filename, int jobId, int partitionNo,
 		int nodeId) {
 		return createFilename(filename, jobId, FileType.REDUCER_OUT, partitionNo, nodeId);
@@ -686,6 +714,10 @@ public class FS {
 
 	public String createReduceOutputFilePath(int jobId, String filename, int nodeId) {
 		return getDataRoot() + createReduceOutputFilename(jobId, filename, nodeId);
+	}
+
+	public String createFilename(String filename, int jobId, FileType fileType) {
+		return String.format("%s-%s-jobId-%d", filename, fileType.toString());
 	}
 
 	public String createFilename(String filename, int jobId, FileType fileType, int nodeId) {

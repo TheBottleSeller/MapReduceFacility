@@ -1,6 +1,10 @@
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -11,7 +15,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -212,7 +218,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		int minKey, int numReducers) throws RemoteException {
 
 		boolean success = false;
-		Combiner440 combiner = new Combiner440();
+		MapCombiner440 combiner = new MapCombiner440();
 
 		combiner.setMaster(master);
 		combiner.setFs(fs);
@@ -258,17 +264,19 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 	@Override
 	public boolean combineReduces(final Job job) throws RemoteException {
-		// Get reduceFiles.
+		// Gather reduceFiles.
 		final Set<File> reduceFiles = new HashSet<File>();
-		
-		for (final int partitionNo : job.getReducers()) {
+
+		int numPartitions = job.getNumPartitions();
+		for (int partitionNo = 0; partitionNo < numPartitions; partitionNo++) {
+			final int pNo = partitionNo;
 			Thread reductionRetriever = new Thread(new Runnable() {
 				@Override
 				public void run() {
 
 					// blocks until the file is retrieved
 					File reduceFile = fs.getFile(job.getFilename(), job.getId(),
-						FS.FileType.REDUCER_OUT, partitionNo, job.getReducer(partitionNo));
+						FS.FileType.REDUCER_OUT, pNo, job.getReducer(pNo));
 					reduceFiles.add(reduceFile);
 					notifyAll();
 				}
@@ -276,21 +284,40 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			reductionRetriever.start();
 		}
 
-		while (reduceFiles.size() != job.getReducers().length) {
+		while (reduceFiles.size() != numPartitions) {
 			try {
 				wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-		
+
 		// Combine reduceFiles.
-		
-		
-		
-		// Combine shit.
-		uploadCmd("");
-		return false;
+		File output = null;
+		try {
+			output = fs.makeFinalOutputFile(job.getFilename(), job.getId());
+			PrintWriter writer = new PrintWriter(new FileOutputStream(output));
+			for (File reduceFile : reduceFiles) {
+				String line;
+				BufferedReader reader = new BufferedReader(new FileReader(reduceFile));
+				while ((line = reader.readLine()) != null) {
+					writer.write(line);
+				}
+				reader.close();
+			}
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		// Upload final output file.
+		if (output == null) {
+			return false;
+		} else {
+			String cmd = String.format("upload %s %s", output.getAbsolutePath(), output.getName());
+			uploadCmd(cmd);
+			return true;
+		}
 	}
 
 	@Override
