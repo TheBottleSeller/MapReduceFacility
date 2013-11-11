@@ -9,4 +9,8 @@ public class KVPairs<K, V> extends KVPair<K, List<V>>{
 	public void addValue(V value) {
 		this.value.add(value);
 	}
+	
+	public void addValues(List<V> value) {
+		this.value.addAll(value);
+	}
 }

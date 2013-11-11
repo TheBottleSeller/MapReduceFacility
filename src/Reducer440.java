@@ -22,6 +22,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 	private FS fs;
 	private ReduceJob job;
 	private int nodeId;
+	private Set<File> partitionFiles;
 
 	private BufferedReader reader;
 	private PrintWriter writer;
@@ -31,26 +32,25 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 	@Override
 	public void run() {
 		// gather files blocks while partition files are obtained
-		Set<File> partitionFiles = gatherFiles();
-		
-		mergeSortPartitions(partitionFiles);
-		
+		partitionFiles = gatherFiles();
+
+		File inPart = mergeSortPartitions(partitionFiles);
+
 		PrintWriter writer;
 		try {
 			writer = new PrintWriter(new FileOutputStream(inPart));
-			
+
 		} catch (FileNotFoundException e1) {
 			e1.printStackTrace();
 		}
 		// TODO STOPPED HERE
-		
+
 		String line;
 		String key;
 		int numValues;
 		List<Vin> values = new ArrayList<Vin>();
 		try {
-			readLines: 
-				while ((key = reader.readLine()) != null) {
+			readLines: while ((key = reader.readLine()) != null) {
 				line = reader.readLine();
 				if (line == null) {
 					continue;
@@ -78,36 +78,36 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 			e.printStackTrace();
 		}
 	}
-	
+
 	private Set<File> gatherFiles() {
 		final Set<File> partitionFiles = new HashSet<File>(job.getMappers().size());
-		
+
 		for (final int mapperId : job.getMappers()) {
 			Thread partitionRetriever = new Thread(new Runnable() {
 				@Override
 				public void run() {
-					
+
 					// blocks until the file is retrieved
-					File partitionFile = fs.getFile(job.getFilename(), job.getJobId(), FS.FileType.PARTITION, 
-							job.getPartitionNum(), mapperId);
+					File partitionFile = fs.getFile(job.getFilename(), job.getJobId(),
+						FS.FileType.PARTITION, job.getPartitionNum(), mapperId);
 					partitionFiles.add(partitionFile);
 					notifyAll();
 				}
 			});
 			partitionRetriever.start();
 		}
-		
-		while(partitionFiles.size() != job.getMappers().size()) {
+
+		while (partitionFiles.size() != job.getMappers().size()) {
 			try {
 				wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
 		}
-		
+
 		return partitionFiles;
 	}
-	
+
 	private File mergeSortPartitions(Set<File> partitionFiles) throws IOException {
 		// create merged partition file and writer
 		File mergedFile = fs.makeReduceInputFile(job.getFilename(), job.getJobId(), job.getPartitionNum());
@@ -115,48 +115,52 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 		
 		// create partition readers
 		Map<File, BufferedReader> readers = new HashMap<File, BufferedReader>(partitionFiles.size());
-		final Map<File, KVPair<String, String>> currentKVPairs = new HashMap<File, KVPair<String, String>>(partitionFiles.size());
+		final Map<File, KVPairs<String, String>> currentKVPairs = new HashMap<File, KVPairs<String, String>>(partitionFiles.size());
 		String key = "";
-		String value = "";
 		String minKey = null;
-		String nextMinKey = null;
 		for (File partition : partitionFiles) {
 			
 			BufferedReader reader = new BufferedReader(new FileReader(partition));
 			readers.put(partition, reader);
-			key = reader.readLine();
-			value = reader.readLine();
-			// check if partition is empty
-			if (key == null || value == null) {
+			KVPairs<String, String> pairs = readKVPairs(reader);
+			if (pairs == null) {
 				partitionFiles.remove(partition);
 				reader.close();
-			} else {
-				if (minKey == null) {
-					minKey = key;
-					nextMinKey = key;
-				}
-				if (minKey.compareTo(key) == 1) {
-					nextMinKey = minKey;
-					minKey = key;
-				}
-				currentKVPairs.put(partition, new KVPair<String, String>(key, value));
 			}
+			if (minKey == null) {
+				minKey = key;
+			}
+			if (minKey.compareTo(key) == 1) {
+				minKey = key;
+			}
+			
+			currentKVPairs.put(partition, pairs);
 		}
 		
 		SortedSet<File> lowestKeys = new TreeSet<File>(new Comparator<File>() {
 
 			@Override
 			public int compare(File partition1, File partition2) {
-				KVPair<String, String> pair1 = currentKVPairs.get(partition1);
-				KVPair<String, String> pair2 = currentKVPairs.get(partition2);
+				KVPairs<String, String> pair1 = currentKVPairs.get(partition1);
+				KVPairs<String, String> pair2 = currentKVPairs.get(partition2);
 				return pair1.getKey().compareTo(pair2.getKey());
 			}
 			
 		});
 		
-		// STOPPED HERE
-		
-		KVPairs<String, String> currentPair = new KVPairs<String, String>(minKey, new ArrayList<String>());
+		KVPairs<String, String> currentMin = new KVPairs<String, String>(minKey, new ArrayList<String>());
+		while (!lowestKeys.isEmpty()) {
+			File lowestFile = lowestKeys.first();
+			lowestKeys.remove(lowestFile);
+			KVPairs<String, String> pair = currentKVPairs.get(lowestFile);
+			if (pair.getKey().equals(currentMin.getKey())) {
+				currentMin.addValues(pair.getValue());
+				lowestKeys.add(lowestFile);
+				lowes
+			} else {
+				mergedWriter.println()
+			}
+		}
 		while (currentPair != null) {
 			for (File partition : partitionFiles) {
 				BufferedReader reader = readers.get(partition);
@@ -166,6 +170,20 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 		}
 		// run merge sort
 		return mergedFile;
+	}
+	
+	
+	public KVPairs<String, String> readKVPairs(BufferedReader reader) throws IOException {
+		String key = reader.readLine();
+		if (key == null) {
+			return null;
+		}
+		KVPairs<String, String> pairs = new KVPairs<String, String>(key, new ArrayList<String>());
+		int numValues = Integer.parseInt(reader.readLine());
+		for (int i = 0; i < numValues; i++) {
+			pairs.addValue(reader.readLine());
+		}
+		return pairs;
 	}
 
 	public void setMaster(FacilityManagerMaster master) {
@@ -183,7 +201,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 	public void setFS(FS fs) {
 		this.fs = fs;
 	}
-	
+
 	public void setManager(FacilityManager manager) {
 		this.manager = manager;
 	}

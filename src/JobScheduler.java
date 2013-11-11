@@ -165,24 +165,14 @@ public class JobScheduler {
 				incrementActiveReduces(minWorker);
 			}
 
-			// tell all mappers to send partitions to appropriate reducers
+			// get all mappers ids
 			System.out.println("Telling mappers about reducer distribution");
 			Set<Integer> mappers = new HashSet<Integer>();
 			for (int mapperId : job.getMappers()) {
 				mappers.add(mapperId);
 			}
 
-			for (int mapperId : mappers) {
-				try {
-					master.getManager(mapperId).distributePartitions(job.getId(),
-						job.getFilename(), job.getReducers());
-				} catch (RemoteException e) {
-					// TODO what happens here, error re do the mapper
-					e.printStackTrace();
-				}
-			}
-
-			// tell all reducers to await partitions and then reduce them
+			// issue reduce jobs to each reducer
 			System.out.println("Scheduled reducers");
 			int numPartitions = blockLocations.size();
 			Class<?> clazz = job.getUserDefinedClass();
@@ -193,7 +183,7 @@ public class JobScheduler {
 				FacilityManager manager = master.getManager(nodeId);
 				boolean success = false;
 				try {
-					manager.runReduceJob(new ReduceJob(jobId, job.getFilename(), partitionNo, mappers, clazz));
+					success = manager.runReduceJob(new ReduceJob(jobId, job.getFilename(), partitionNo, mappers, clazz));
 				} catch (RemoteException e) {
 					e.printStackTrace();
 				}

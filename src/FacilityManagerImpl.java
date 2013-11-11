@@ -249,26 +249,6 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean distributePartitions(int jobId, String filename,
-			int[] reducers) throws RemoteException {
-		boolean success = true;
-		for (int partitionNo = 0; partitionNo < reducers.length; partitionNo++) {
-			String partitionPath = fs.createPartitionDataFilePath(filename,
-					jobId, partitionNo, getNodeId());
-			String remoteFilename = String.format("%s-jobId-%d-part-%d-%d",
-					filename, jobId, partitionNo, getNodeId());
-			try {
-				fs.sendFile(jobId, partitionPath, remoteFilename,
-						config.getNodeAddress(reducers[partitionNo]));
-			} catch (FileNotFoundException e) {
-				success = false;
-				e.printStackTrace();
-			}
-		}
-		return success;
-	}
-
-	@Override
 	public boolean runReduceJob(ReduceJob job) throws RemoteException {
 		boolean success = false;
 		MapReduce440 mr;

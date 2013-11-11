@@ -21,9 +21,6 @@ public interface FacilityManager extends Remote {
 	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId,
 		int maxKey, int minKey, int numReducers) throws RemoteException;
 
-	public boolean distributePartitions(int jobId, String filename, int[] reducers)
-		throws RemoteException;
-
 	public boolean runReduceJob(ReduceJob job) throws RemoteException;
 
 	void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
