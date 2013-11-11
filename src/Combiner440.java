@@ -123,7 +123,7 @@ public class Combiner440 extends Thread {
 
 		// tell master that combine phase is done
 		try {
-			master.combineFinished(jobId, nodeId, blockIndices.size());
+			master.combineFinished(jobId, blockIndices.size());
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}

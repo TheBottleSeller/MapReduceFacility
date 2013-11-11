@@ -26,5 +26,5 @@ public interface FacilityManager extends Remote {
 	void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
 		throws FileNotFoundException, RemoteException;
 
-	boolean combineReduces() throws RemoteException;
+	boolean combineReduces(Job job) throws RemoteException;
 }
