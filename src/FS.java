@@ -410,9 +410,8 @@ public class FS {
 		return null;
 	}
 
-	public File makeFinalOutputFile(String filename, int jobId, int partitionNum)
-		throws IOException {
-		File output = new File(createFinalOutputFilePath(filename, jobId, partitionNum));
+	public File makeFinalOutputFile(String filename, int jobId) throws IOException {
+		File output = new File(createFinalOutputFilePath(filename, jobId));
 		if (output.exists()) {
 			output.delete();
 		}
@@ -420,9 +419,9 @@ public class FS {
 		return output;
 	}
 
-	public File getFinalOutputFile(String filename, int jobId, int partitionNum) {
+	public File getFinalOutputFile(String filename, int jobId) {
 		try {
-			return new File(createFinalOutputFilePath(filename, jobId, partitionNum));
+			return new File(createFinalOutputFilePath(filename, jobId));
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -691,8 +690,7 @@ public class FS {
 			+ createReducerOutputFilename(filename, jobId, partitionNo, manager.getNodeId());
 	}
 
-	public String createFinalOutputFilePath(String filename, int jobId, int partitionNo)
-		throws RemoteException {
+	public String createFinalOutputFilePath(String filename, int jobId) throws RemoteException {
 		return getDataRoot() + createFinalOutputFilename(filename, jobId);
 	}
 

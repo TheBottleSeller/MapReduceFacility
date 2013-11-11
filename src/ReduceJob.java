@@ -26,7 +26,7 @@ public class ReduceJob implements Serializable {
 		this.clazz = clazz;
 	}
 
-	public int getJobId() {
+	public int getId() {
 		return jobId;
 	}
 

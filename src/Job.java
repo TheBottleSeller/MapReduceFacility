@@ -89,6 +89,10 @@ public class Job {
 	public int getNumBlocks() {
 		return numBlocks;
 	}
+	
+	public int getNumPartitions() {
+		return reducers.length;
+	}
 
 	@Override
 	public String toString() {

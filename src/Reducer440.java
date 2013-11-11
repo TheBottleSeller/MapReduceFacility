@@ -37,7 +37,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 			runReduce(reduceInput);
 
 			// tell master that reduce job is finished
-			master.reduceFinished(job.getJobId());
+			master.reduceFinished(job.getId());
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -52,7 +52,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 				public void run() {
 
 					// blocks until the file is retrieved
-					File partitionFile = fs.getFile(job.getFilename(), job.getJobId(),
+					File partitionFile = fs.getFile(job.getFilename(), job.getId(),
 						FS.FileType.PARTITION, job.getPartitionNum(), mapperId);
 					partitionFiles.add(partitionFile);
 					notifyAll();
@@ -74,7 +74,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 
 	private File mergeSortPartitions(Set<File> partitionFiles) throws IOException {
 		// create merged partition file and writer
-		File mergedFile = fs.makeReduceInputFile(job.getFilename(), job.getJobId(),
+		File mergedFile = fs.makeReduceInputFile(job.getFilename(), job.getId(),
 			job.getPartitionNum());
 		PrintWriter mergedWriter = new PrintWriter(new FileOutputStream(mergedFile));
 
@@ -174,7 +174,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 	}
 
 	public void runReduce(File reduceInput) throws IOException {
-		File reducerOutput = fs.makeReduceOutputFile(job.getFilename(), job.getJobId(),
+		File reducerOutput = fs.makeReduceOutputFile(job.getFilename(), job.getId(),
 			job.getPartitionNum());
 		PrintWriter writer = new PrintWriter(new FileOutputStream(reducerOutput));
 		BufferedReader reader = new BufferedReader(new FileReader(reduceInput));
