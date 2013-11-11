@@ -15,16 +15,15 @@ public interface FacilityManager extends Remote {
 
 	public int dispatchJob(Class<?> clazz, String filename) throws RemoteException;
 
-	public boolean runMapJob(int jobId, String filename, int blockIndex, Class<?> clazz)
-		throws RemoteException;
+	public boolean runMapJob(MapJob mapJob) throws RemoteException;
 
 	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId,
 		int maxKey, int minKey, int numReducers) throws RemoteException;
 
-	public boolean runReduceJob(ReduceJob job) throws RemoteException;
+	public boolean runReduceJob(ReduceJob reduceJob) throws RemoteException;
 
 	void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
 		throws FileNotFoundException, RemoteException;
 
-	boolean combineReduces(Job job) throws RemoteException;
+	boolean combineReduces(MapReduceJob job) throws RemoteException;
 }

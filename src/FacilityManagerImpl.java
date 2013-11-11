@@ -176,8 +176,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runMapJob(int jobId, String filename, int blockIndex, Class<?> clazz)
-		throws RemoteException {
+	public boolean runMapJob(MapJob mapJob) throws RemoteException {
 		System.out.println("Running local map job");
 		File block = fs.makeFileBlock(filename, blockIndex);
 		if (!block.exists()) {
@@ -185,12 +184,14 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		}
 		boolean success = false;
 		try {
-			MapReduce440 mr = (MapReduce440) clazz.newInstance();
+			MapReduce440 mr = (MapReduce440) mapJob.getClazz().newInstance();
 			File outputBlock = fs.makeMappedFileBlock(filename, blockIndex, jobId);
 			Mapper440<?, ?, ?, ?> mapper = mr.createMapper();
 
 			// set necessary parameters
 			mapper.setMaster(master);
+			mapper.setFS(fs);
+			mapper.setMapJob(mapJob);
 			mapper.setInBlock(block);
 			mapper.setOutBlock(outputBlock);
 			mapper.setJobId(jobId);
@@ -241,16 +242,16 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runReduceJob(ReduceJob job) throws RemoteException {
+	public boolean runReduceJob(ReduceJob reduceJob) throws RemoteException {
 		boolean success = false;
 		MapReduce440 mr;
 		try {
-			mr = (MapReduce440) job.getClazz().newInstance();
+			mr = (MapReduce440) reduceJob.getClazz().newInstance();
 			Reducer440<?, ?, ?, ?> reducer = mr.createReducer();
 
 			reducer.setMaster(master);
 			reducer.setFS(fs);
-			reducer.setReduceJob(job);
+			reducer.setReduceJob(reduceJob);
 
 			reducer.start();
 			success = true;
@@ -263,7 +264,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean combineReduces(final Job job) throws RemoteException {
+	public boolean combineReduces(final MapReduceJob job) throws RemoteException {
 		// Gather reduceFiles.
 		final Set<File> reduceFiles = new HashSet<File>();
 
