@@ -1,9 +1,5 @@
-import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -15,14 +11,14 @@ import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
 
-public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
+public abstract class Reducer440 extends Thread {
 
 	private FacilityManagerMaster master;
 	private FS fs;
 	private ReduceJob job;
 	private Set<File> partitionFiles;
 
-	public abstract KVPair<Kout, Vout> reduce(KVPair<String, List<String>> input);
+	public abstract KVPair<String, String> reduce(KVPair<String, List<String>> input);
 
 	@Override
 	public void run() {
@@ -76,18 +72,18 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 		// create merged partition file and writer
 		File mergedFile = fs.makeReduceInputFile(job.getFilename(), job.getId(),
 			job.getPartitionNum());
-		PrintWriter mergedWriter = new PrintWriter(new FileOutputStream(mergedFile));
-
+		RecordWriter mergedWriter = new RecordWriter(mergedFile); 
+		
 		// create partition readers
-		Map<File, BufferedReader> readers = new HashMap<File, BufferedReader>(partitionFiles.size());
+		Map<File, RecordReader> readers = new HashMap<File, RecordReader>(partitionFiles.size());
 		final Map<File, KVPairs<String, String>> currentKVPairs = new HashMap<File, KVPairs<String, String>>(
 			partitionFiles.size());
 		String minKey = null;
 		for (File partition : partitionFiles) {
 
-			BufferedReader reader = new BufferedReader(new FileReader(partition));
+			RecordReader reader = new RecordReader(partition);
 			readers.put(partition, reader);
-			KVPairs<String, String> pairs = readKVPairs(reader);
+			KVPairs<String, String> pairs = reader.readKeyMultiValues();
 			if (pairs == null) {
 				partitionFiles.remove(partition);
 				reader.close();
@@ -134,25 +130,21 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 
 			// get files current kvpair and reader
 			KVPairs<String, String> pair = currentKVPairs.remove(lowestFile);
-			BufferedReader reader = readers.get(lowestFile);
+			RecordReader reader = readers.get(lowestFile);
 
 			// merge the kvpair and currentMin pair if keys are equal
 			if (pair.getKey().equals(currentMin.getKey())) {
 				currentMin.addValues(pair.getValue());
 			} else {
 				// print the currentMin key to merged file
-				mergedWriter.println(currentMin.getKey());
-				mergedWriter.println(currentMin.getValue().size());
-				for (String v : currentMin.getValue()) {
-					mergedWriter.println(v);
-				}
+				mergedWriter.writeKeyMultiValues(currentMin.getKey(), currentMin.getValue());
 
 				// set the currentMin to the previously read kvpair
 				currentMin = pair;
 			}
 
 			// read next pair for lowestFile and add back to set if appropriate
-			KVPairs<String, String> nextPair = readKVPairs(reader);
+			KVPairs<String, String> nextPair = reader.readKeyMultiValues();
 			if (nextPair != null) {
 				currentKVPairs.put(lowestFile, nextPair);
 				lowestKeys.add(lowestFile);
@@ -162,12 +154,7 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 		}
 
 		// print the currentMin key to merged file
-		mergedWriter.println(currentMin.getKey());
-		mergedWriter.println(currentMin.getValue().size());
-		for (String v : currentMin.getValue()) {
-			mergedWriter.println(v);
-		}
-
+		mergedWriter.writeKeyMultiValues(currentMin.getKey(), currentMin.getValue());
 		mergedWriter.close();
 
 		return mergedFile;
@@ -176,33 +163,19 @@ public abstract class Reducer440<Kin, Vin, Kout, Vout> extends Thread {
 	public void runReduce(File reduceInput) throws IOException {
 		File reducerOutput = fs.makeReduceOutputFile(job.getFilename(), job.getId(),
 			job.getPartitionNum());
-		PrintWriter writer = new PrintWriter(new FileOutputStream(reducerOutput));
-		BufferedReader reader = new BufferedReader(new FileReader(reduceInput));
-		KVPairs<String, String> kvpairs;
-		while ((kvpairs = readKVPairs(reader)) != null) {
-			System.out.print("key = " + kvpairs.getKey() + ", values = "
-				+ Arrays.toString(kvpairs.getValue().toArray()));
+		RecordWriter writer = new RecordWriter(reducerOutput);
+		RecordReader reader = new RecordReader(reduceInput);
+		KVPairs<String, String> kvPairs;
+		while ((kvPairs = reader.readKeyMultiValues()) != null) {
+			System.out.print("key = " + kvPairs.getKey() + ", values = "
+				+ Arrays.toString(kvPairs.getValue().toArray()));
 
-			KVPair<Kout, Vout> reduction = reduce(kvpairs);
+			KVPair<String, String> reduction = reduce(kvPairs);
 
-			writer.write(reduction.getKey() + "\n");
-			writer.write(reduction.getValue() + "\n");
+			writer.writeKeyValues(reduction.getKey(), reduction.getValue());
 		}
 		writer.close();
 		reader.close();
-	}
-
-	public KVPairs<String, String> readKVPairs(BufferedReader reader) throws IOException {
-		String key = reader.readLine();
-		if (key == null) {
-			return null;
-		}
-		KVPairs<String, String> pairs = new KVPairs<String, String>(key, new ArrayList<String>());
-		int numValues = Integer.parseInt(reader.readLine());
-		for (int i = 0; i < numValues; i++) {
-			pairs.addValue(reader.readLine());
-		}
-		return pairs;
 	}
 
 	public void setMaster(FacilityManagerMaster master) {

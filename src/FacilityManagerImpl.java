@@ -15,9 +15,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -181,7 +179,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		boolean success = false;
 		try {
 			MapReduce440 mr = (MapReduce440) mapJob.getClazz().newInstance();
-			Mapper440<?, ?, ?, ?> mapper = mr.createMapper();
+			Mapper440 mapper = mr.createMapper();
 
 			// set parameters
 			mapper.setMaster(master);
@@ -232,7 +230,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		MapReduce440 mr;
 		try {
 			mr = (MapReduce440) reduceJob.getClazz().newInstance();
-			Reducer440<?, ?, ?, ?> reducer = mr.createReducer();
+			Reducer440 reducer = mr.createReducer();
 
 			reducer.setMaster(master);
 			reducer.setFS(fs);

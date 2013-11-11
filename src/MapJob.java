@@ -18,11 +18,8 @@ public class MapJob extends NodeJob implements Serializable {
 		minKey = Integer.MAX_VALUE;
 	}
 	
-	public void updateMaxKey(int key) {
+	public void updateMaxMinKey(int key) {
 		maxKey = Math.max(maxKey, key);
-	}
-	
-	public void updateMinKey(int key) {
 		minKey = Math.min(minKey, key);
 	}
 	
