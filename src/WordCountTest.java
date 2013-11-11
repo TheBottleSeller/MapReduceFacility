@@ -3,25 +3,23 @@ import java.util.List;
 
 public class WordCountTest extends MapReduce440 {
 
-	public class Mapper extends Mapper440<Integer, String, String, Integer> {
+	public class Mapper extends Mapper440 {
 
 		@Override
-		public List<KVPair<String, Integer>> map(KVPair<Integer, String> input) {
-			String line = input.getValue();
-			String[] words = line.split(" ");
-			List<KVPair<String, Integer>> tempValues = new ArrayList<KVPair<String, Integer>>();
+		public List<KVPair<String, String>> map(String record) {
+			String[] words = record.split(" ");
+			List<KVPair<String, String>> tempValues = new ArrayList<KVPair<String, String>>();
 			for (String word : words) {
-				tempValues.add(new KVPair<String, Integer>(word, 1));
+				tempValues.add(new KVPair<String, String>(word, 1 + ""));
 			}
 			return tempValues;
 		}
 	}
 
-	public class Reducer extends Reducer440<String, Integer, String, Integer> {
+	public class Reducer extends Reducer440 {
 
 		@Override
-		public KVPair<String, Integer> reduce(
-				KVPair<String, List<String>> input) {
+		public KVPair<String, String> reduce(KVPair<String, List<String>> input) {
 			String word = input.getKey();
 			List<String> countString = input.getValue();
 			List<Integer> counts = new ArrayList<Integer>(countString.size());
@@ -32,16 +30,15 @@ public class WordCountTest extends MapReduce440 {
 			for (int c : counts) {
 				total += c;
 			}
-			return new KVPair<String, Integer>(word, total);
+			return new KVPair<String, String>(word, total + "");
 		}
 	}
 
-	@Override
-	public Mapper440<?, ?, ?, ?> createMapper() {
+	public Mapper440 createMapper() {
 		return new Mapper();
 	}
 
-	public Reducer440<?, ?, ?, ?> createReducer() {
+	public Reducer440 createReducer() {
 		return new Reducer();
 	}
 }

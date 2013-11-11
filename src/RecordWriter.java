@@ -24,4 +24,9 @@ public class RecordWriter {
 		}
 	}
 
+	public void close() {
+		if (writer != null) {
+			writer.close();
+		}
+	}
 }

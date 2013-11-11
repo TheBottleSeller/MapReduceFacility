@@ -13,7 +13,7 @@ public class RecordReader {
 		this.reader = new BufferedReader(new FileReader(inFile));
 	}
 
-	public KVPair<String, String> readKeyValues() throws IOException {
+	public KVPair<String, String> readKeyValue() throws IOException {
 		String key = reader.readLine();
 		String value = reader.readLine();
 		if (key == null || value == null) {
@@ -34,6 +34,12 @@ public class RecordReader {
 			values.add(reader.readLine());
 		}
 		return new KVPairs<String, String>(key, values);
+	}
+
+	public void close() throws IOException {
+		if (reader != null) {
+			reader.close();
+		}
 	}
 
 }

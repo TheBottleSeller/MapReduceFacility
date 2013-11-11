@@ -1,10 +1,6 @@
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -23,8 +19,8 @@ public class MapCombiner440 extends Thread {
 	private String filename;
 	private int numReducers;
 	private Set<Integer> blockIndices;
-	private Map<Integer, PrintWriter> partitionWriters;
-	private Map<Integer, BufferedReader> blockReaders;
+	private Map<Integer, RecordWriter> partitionWriters;
+	private Map<Integer, RecordReader> blockReaders;
 	private int minKey;
 	private int maxKey;
 
@@ -33,38 +29,32 @@ public class MapCombiner440 extends Thread {
 	}
 
 	public void init() throws IOException {
-		partitionWriters = new HashMap<Integer, PrintWriter>(numReducers);
+		partitionWriters = new HashMap<Integer, RecordWriter>(numReducers);
 		for (int i = 0; i < numReducers; i++) {
 			File partitionFile = fs.makePartitionFileBlock(filename, jobId, i);
-			partitionWriters.put(i, new PrintWriter(new FileOutputStream(partitionFile)));
+			partitionWriters.put(i, new RecordWriter(partitionFile));
 		}
 
-		blockReaders = new HashMap<Integer, BufferedReader>(blockIndices.size());
+		blockReaders = new HashMap<Integer, RecordReader>(blockIndices.size());
 		for (Integer blockIndex : blockIndices) {
 			File blockFile = fs.getMappedFileBlock(filename, blockIndex, jobId);
-			blockReaders.put(blockIndex, new BufferedReader(new FileReader(blockFile)));
+			blockReaders.put(blockIndex, new RecordReader(blockFile));
 		}
 	}
 
 	@Override
 	public void run() {
 		boolean success = true;
-		BufferedReader blockReader;
-		PrintWriter partitionWriter;
+		RecordReader blockReader;
+		RecordWriter partitionWriter;
 		for (Integer blockIndex : blockIndices) {
 			blockReader = blockReaders.get(blockIndex);
-			String key;
-			String value;
+			KVPair<String, String> kvPair;
 			try {
-				while ((key = blockReader.readLine()) != null) {
-					value = blockReader.readLine();
-					if (value == null) {
-						continue;
-					}
-					int partitionNo = partition(key.hashCode());
+				while ((kvPair = blockReader.readKeyValue()) != null) {
+					int partitionNo = partition(kvPair.getKey().hashCode());
 					partitionWriter = partitionWriters.get(partitionNo);
-					partitionWriter.println(key);
-					partitionWriter.println(value);
+					partitionWriter.writeKeyValues(kvPair.getKey(), kvPair.getValue());
 				}
 				blockReader.close();
 			} catch (IOException e) {
@@ -73,44 +63,35 @@ public class MapCombiner440 extends Thread {
 		}
 
 		// Close all print writers
-		for (PrintWriter writer : partitionWriters.values()) {
+		for (RecordWriter writer : partitionWriters.values()) {
 			writer.close();
 		}
 
 		// Read in each partition into memory, sort, and write back to file
 		for (Integer partitionNo : partitionWriters.keySet()) {
 			try {
-				BufferedReader partitionReader = new BufferedReader(new FileReader(
-					fs.getPartitionFileBlock(filename, jobId, partitionNo)));
-				String key = null;
-				String value = null;
+				RecordReader partitionReader = new RecordReader(fs.getPartitionFileBlock(filename,
+					jobId, partitionNo));
+				KVPair<String, String> kvPair;
 
 				// Combine values for each key
 				SortedMap<String, List<String>> data = new TreeMap<String, List<String>>();
-				while ((key = partitionReader.readLine()) != null) {
-					value = partitionReader.readLine();
-					if (value == null) {
-						continue;
-					}
-					List<String> values = data.get(key);
+				while ((kvPair = partitionReader.readKeyValue()) != null) {
+					List<String> values = data.get(kvPair.getKey());
 					if (values == null) {
 						values = new ArrayList<String>();
-						data.put(key, values);
+						data.put(kvPair.getKey(), values);
 					}
-					values.add(value);
+					values.add(kvPair.getValue());
 				}
 				partitionReader.close();
 
 				// Write aggregate records to disk
-				partitionWriter = new PrintWriter(new FileOutputStream(fs.makePartitionFileBlock(
-					filename, jobId, partitionNo)));
+				partitionWriter = new RecordWriter(fs.makePartitionFileBlock(filename, jobId,
+					partitionNo));
 				for (String aggregateKey : data.keySet()) {
 					List<String> values = data.get(aggregateKey);
-					partitionWriter.println(aggregateKey);
-					partitionWriter.println(values.size());
-					for (String v : values) {
-						partitionWriter.println(v);
-					}
+					partitionWriter.writeKeyMultiValues(aggregateKey, values);
 				}
 				partitionWriter.close();
 
@@ -163,11 +144,11 @@ public class MapCombiner440 extends Thread {
 		this.blockIndices = blockIndices;
 	}
 
-	public void setPartitionWriters(Map<Integer, PrintWriter> partitionWriters) {
+	public void setPartitionWriters(Map<Integer, RecordWriter> partitionWriters) {
 		this.partitionWriters = partitionWriters;
 	}
 
-	public void setBlockReaders(Map<Integer, BufferedReader> blockReaders) {
+	public void setBlockReaders(Map<Integer, RecordReader> blockReaders) {
 		this.blockReaders = blockReaders;
 	}
 
