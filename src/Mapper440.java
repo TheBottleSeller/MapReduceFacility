@@ -1,10 +1,10 @@
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.rmi.RemoteException;
 import java.util.List;
 
 public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
@@ -14,23 +14,22 @@ public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 	private MapJob mapJob;
 	private int nodeId;
 
-	private BufferedReader reader;
-	private PrintWriter writer;
-	
-	public void init() throws FileNotFoundException {
-		reader = new BufferedReader(new FileReader(inBlock));
-		writer = new PrintWriter(new FileOutputStream(outBlock));
-	}
-
 	public abstract List<KVPair<Kout, Vout>> map(KVPair<Integer, String> input);
 
 	@Override
 	public void run() {
 		int lineNum = 0;
 		String line;
-		int maxKey = Integer.MIN_VALUE;
-		int minKey = Integer.MAX_VALUE;
+		boolean success = false;
 		try {
+			// open user file block as input and output file
+			File outFile = fs.makeMappedFileBlock(mapJob.getFilename(), mapJob.getBlockIndex(), mapJob.getId());
+			File inFile = fs.getFileBlock(mapJob.getFilename(), mapJob.getBlockIndex());
+			
+			// open associated reader and writer
+			BufferedReader reader = new BufferedReader(new FileReader(inFile));
+			PrintWriter writer = new PrintWriter(new FileOutputStream(outFile));
+			
 			while ((line = reader.readLine()) != null) {
 				KVPair<Integer, String> record = new KVPair<Integer, String>(lineNum, line);
 				System.out.println("input record " + record);
@@ -38,17 +37,23 @@ public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 				for (KVPair<Kout, Vout> kvPair : mappedRecord) {
 					System.out.println("intermediate record " + kvPair);
 					int keyHash = kvPair.getKey().hashCode();
-					maxKey = Math.max(maxKey, keyHash);
-					minKey = Math.min(minKey, keyHash);
-					writer.write(kvPair.getKey() + "\n");
-					writer.write(kvPair.getValue() + "\n");
+					mapJob.updateMaxKey(keyHash);
+					mapJob.updateMinKey(keyHash);
+					writer.println(kvPair.getKey());
+					writer.println(kvPair.getValue());
 				}
 				lineNum++;
 			}
+			success = true;
 			writer.close();
 			reader.close();
-			master.mapFinished(jobId, nodeId, blockIndex, maxKey, minKey);
 		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		try {
+			master.mapFinished(mapJob, nodeId);
+		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
 	}
@@ -58,34 +63,14 @@ public abstract class Mapper440<Kin, Vin, Kout, Vout> extends Thread {
 	}
 	
 	public void setFS(FS fs) {
-		
+		this.fs = fs;
 	}
-
-	public void setInBlock(File inBlock) {
-		this.inBlock = inBlock;
+	
+	public void setMapJob(MapJob mapJob) {
+		this.mapJob = mapJob;
 	}
-
-	public void setOutBlock(File outBlock) {
-		this.outBlock = outBlock;
-	}
-
-	public void setJobId(int jobId) {
-		this.jobId = jobId;
-	}
-
+	
 	public void setNodeId(int nodeId) {
 		this.nodeId = nodeId;
-	}
-
-	public void setBlockIndex(int blockIndex) {
-		this.blockIndex = blockIndex;
-	}
-
-	public void setReader(BufferedReader reader) {
-		this.reader = reader;
-	}
-
-	public void setWriter(PrintWriter writer) {
-		this.writer = writer;
 	}
 }

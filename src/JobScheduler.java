@@ -103,11 +103,14 @@ public class JobScheduler {
 		return jobId;
 	}
 
-	public void mapFinished(int jobId, int nodeId, int blockIndex, int maxKey, int minKey) {
-		boolean mapPhaseFinished = activeJobs.get(jobId).mapFinished(maxKey, minKey);
+	public void mapFinished(MapJob mapJob, int nodeId) {
+		int jobId = mapJob.getId();
+		boolean mapPhaseFinished = activeJobs.get(jobId).mapFinished(mapJob);
 		if (mapPhaseFinished) {
 			// Start combine phase on all of the mappers
 			MapReduceJob job = activeJobs.get(jobId);
+			
+			// make map of nodeId -> list of blocks mapped on node
 			Map<Integer, Set<Integer>> nodeToBlocks = new HashMap<Integer, Set<Integer>>(
 				job.getNumBlocks());
 			for (int i = 0; i < job.getNumBlocks(); i++) {
@@ -119,6 +122,8 @@ public class JobScheduler {
 				}
 				blocks.add(i);
 			}
+			
+			
 			for (Integer mapperId : nodeToBlocks.keySet()) {
 				FacilityManager mapper = master.getManager(mapperId);
 				if (mapper == null) {

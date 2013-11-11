@@ -178,37 +178,22 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	@Override
 	public boolean runMapJob(MapJob mapJob) throws RemoteException {
 		System.out.println("Running local map job");
-		File block = fs.makeFileBlock(filename, blockIndex);
-		if (!block.exists()) {
-			return false;
-		}
 		boolean success = false;
 		try {
 			MapReduce440 mr = (MapReduce440) mapJob.getClazz().newInstance();
-			File outputBlock = fs.makeMappedFileBlock(filename, blockIndex, jobId);
 			Mapper440<?, ?, ?, ?> mapper = mr.createMapper();
 
-			// set necessary parameters
+			// set parameters
 			mapper.setMaster(master);
 			mapper.setFS(fs);
 			mapper.setMapJob(mapJob);
-			mapper.setInBlock(block);
-			mapper.setOutBlock(outputBlock);
-			mapper.setJobId(jobId);
 			mapper.setNodeId(getNodeId());
-			mapper.setBlockIndex(blockIndex);
-
-			// init mapper by opening up files
-			mapper.init();
-
-			// start mapper
+			
 			mapper.start();
 			success = true;
 		} catch (InstantiationException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
 			e.printStackTrace();
 		}
 		return success;

@@ -60,10 +60,10 @@ public class MapReduceJob {
 		return reducers;
 	}
 	
-	public synchronized boolean mapFinished(int maxKey, int minKey) {
+	public synchronized boolean mapFinished(MapJob mapJob) {
 		completedMaps++;
-		this.maxKey = Math.max(this.maxKey, maxKey);
-		this.minKey = Math.min(this.minKey, minKey);
+		maxKey = Math.max(maxKey, mapJob.getMaxKey());
+		minKey = Math.min(minKey, mapJob.getMinKey());
 		return completedMaps == numBlocks;
 	}
 

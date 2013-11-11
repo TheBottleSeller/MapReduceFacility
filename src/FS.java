@@ -333,7 +333,7 @@ public class FS {
 		}
 	}
 
-	public File makeFileBlock(String filename, int blockIndex) {
+	public File getFileBlock(String filename, int blockIndex) {
 		return new File(createDataFilePath(filename, blockIndex));
 	}
 

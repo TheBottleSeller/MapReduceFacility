@@ -178,10 +178,9 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public void mapFinished(int jobId, int nodeId, int blockIndex, int maxKey, int minKey)
-		throws RemoteException {
-		System.out.println("Mapper finished for block " + blockIndex);
-		scheduler.mapFinished(jobId, nodeId, blockIndex, maxKey, minKey);
+	public void mapFinished(MapJob mapJob, int nodeId) throws RemoteException {
+		System.out.println("Mapper finished for block " + mapJob.getBlockIndex());
+		scheduler.mapFinished(mapJob, nodeId);
 	}
 
 	@Override
