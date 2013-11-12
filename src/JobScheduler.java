@@ -210,11 +210,14 @@ public class JobScheduler {
 			for (int id = 0; id < activeMaps.length; id++) {
 				allNodeIds.add(id);
 			}
+			
 			int minWorker = findMinWorker(allNodeIds);
+			
 			if (minWorker == -1) {
 				System.out.println("Could not find worker to combine reduces.");
-				// TODO: Wait? 
+				// TODO: Wait?
 			}
+			
 			System.out.println("Found worker to combine reduces: " + minWorker);
 			
 			// Gather reduction files, combine them, and upload the results.

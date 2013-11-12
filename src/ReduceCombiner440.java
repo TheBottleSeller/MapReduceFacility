@@ -59,7 +59,7 @@ public class ReduceCombiner440 extends Thread {
 					File reduceFile = fs.getFile(rcJob.getFilename(), rcJob.getId(),
 						FS.FileType.REDUCER_OUT, pNo, rcJob.getReducer(pNo));
 					reduceFiles.add(reduceFile);
-					notifyAll();
+					//notifyAll();
 				}
 			});
 			reductionRetriever.start();
@@ -67,7 +67,8 @@ public class ReduceCombiner440 extends Thread {
 
 		while (reduceFiles.size() != numPartitions) {
 			try {
-				wait();
+				Thread.sleep(1000);
+				//wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

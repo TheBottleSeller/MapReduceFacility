@@ -51,7 +51,7 @@ public abstract class Reducer440 extends Thread {
 					File partitionFile = fs.getFile(job.getFilename(), job.getId(),
 						FS.FileType.PARTITION, job.getPartitionNum(), mapperId);
 					partitionFiles.add(partitionFile);
-					notifyAll();
+					//notifyAll();
 				}
 			});
 			partitionRetriever.start();
@@ -59,7 +59,8 @@ public abstract class Reducer440 extends Thread {
 
 		while (partitionFiles.size() != job.getMappers().size()) {
 			try {
-				wait();
+				Thread.sleep(1000);
+				//wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -79,13 +80,14 @@ public abstract class Reducer440 extends Thread {
 		final Map<File, KVPairs<String, String>> currentKVPairs = new HashMap<File, KVPairs<String, String>>(
 			partitionFiles.size());
 		String minKey = null;
+		Set<File> emptyPartitions = new HashSet<File>();
 		for (File partition : partitionFiles) {
 
 			RecordReader reader = new RecordReader(partition);
 			readers.put(partition, reader);
 			KVPairs<String, String> pairs = reader.readKeyMultiValues();
 			if (pairs == null) {
-				partitionFiles.remove(partition);
+				emptyPartitions.add(partition);
 				reader.close();
 				continue;
 			}
@@ -98,6 +100,8 @@ public abstract class Reducer440 extends Thread {
 
 			currentKVPairs.put(partition, pairs);
 		}
+		
+		partitionFiles.removeAll(emptyPartitions);
 
 		if (minKey == null) {
 			mergedWriter.close();

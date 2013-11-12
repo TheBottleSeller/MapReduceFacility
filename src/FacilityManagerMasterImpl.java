@@ -185,6 +185,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	@Override
 	public void combineFinished(int jobId, int blocksCombined) throws RemoteException {
+		System.out.println("Combiner finished for " + blocksCombined + " blocks");
 		scheduler.combineFinished(jobId, blocksCombined);
 	}
 

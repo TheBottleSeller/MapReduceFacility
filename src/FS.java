@@ -189,21 +189,23 @@ public class FS {
 			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 			out.flush();
 
-			// TODO MAY NEED TO BE SYCHRONIZED
-			out.writeUTF(requestedFilename);
-			out.flush();
 
-			boolean hasFile = in.readBoolean();
-
-			if (hasFile) {
-				int numBytes = 0;
-				while ((numBytes = in.readInt()) != -1) {
-					byte[] bytes = new byte[numBytes];
-					in.read(bytes);
-					fos.write(bytes);
+			synchronized (this) {
+				out.writeUTF(requestedFilename);
+				out.flush();
+	
+				boolean hasFile = in.readBoolean();
+	
+				if (hasFile) {
+					int numBytes = 0;
+					while ((numBytes = in.readInt()) != -1) {
+						byte[] bytes = new byte[numBytes];
+						in.read(bytes);
+						fos.write(bytes);
+					}
+					fos.flush();
+					success = true;
 				}
-				fos.flush();
-				success = true;
 			}
 
 			out.close();
@@ -222,37 +224,6 @@ public class FS {
 		} else {
 			return null;
 		}
-	}
-
-	public boolean sendFile(int jobId, String localFilepath, String remoteFilename,
-		String nodeAddress) throws FileNotFoundException {
-		boolean success = false;
-		BufferedReader reader = new BufferedReader(new FileReader(localFilepath));
-		try {
-			Socket socket = new Socket(nodeAddress, WRITE_PORT);
-
-			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
-			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
-			out.flush();
-
-			out.writeObject(Messages.WRITE_PARTITION);
-			out.writeInt(jobId);
-			out.writeUTF(remoteFilename);
-			String line = "";
-			while ((line = reader.readLine()) != null) {
-				out.writeBoolean(true);
-				out.writeUTF(line);
-			}
-			out.writeBoolean(false);
-			out.flush();
-			reader.close();
-			success = in.readBoolean();
-		} catch (RemoteException e) {
-			e.printStackTrace();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		return success;
 	}
 
 	public boolean remoteWriteData(BufferedReader reader, int nodeId, String namespace,
@@ -633,14 +604,15 @@ public class FS {
 					ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
 					String filename = in.readUTF();
-
 					File localFile = new File(getDataRoot() + filename);
 
 					if (!localFile.exists()) {
 						out.writeBoolean(false);
+						out.flush();
 						return;
 					}
 					out.writeBoolean(true);
+					out.flush();
 
 					FileInputStream fin = new FileInputStream(localFile);
 
@@ -649,10 +621,14 @@ public class FS {
 					while ((numBytesRead = fin.read(bytes)) != -1) {
 						out.writeInt(numBytesRead);
 						out.write(bytes);
+						out.flush();
 					}
 					out.writeInt(numBytesRead);
+					out.flush();
 					fin.close();
 					socket.close();
+					out.close();
+					in.close();
 				} catch (IOException e) {
 					e.printStackTrace();
 				}
@@ -697,11 +673,11 @@ public class FS {
 
 	// TODO: ONLY USED ONCE.
 	public String createFilename(String filename, int jobId, FileType fileType) {
-		return String.format("%s-%s-jobId-%d", filename, fileType.toString());
+		return String.format("%s-%s-jobId-%d", filename, fileType.toString(), jobId);
 	}
 
 	public String createFilename(String filename, int jobId, FileType type, int partNo, int nodeId) {
-		return String.format("%s-%s-jobId-%d-part-%d-node-%d", filename, type.toString(), partNo,
+		return String.format("%s-%s-jobId-%d-part-%d-node-%d", filename, type.toString(), jobId, partNo,
 			nodeId);
 	}
 }
