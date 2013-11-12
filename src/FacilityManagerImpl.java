@@ -231,13 +231,13 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public void runReduceCombineJob(final MapReduceJob job) throws RemoteException {
+	public void runReduceCombineJob(ReduceCombineJob rcJob) throws RemoteException {
 		// Gather and combine reduce files using ReduceCombiner440.
 		ReduceCombiner440 combiner = new ReduceCombiner440();
 
 		combiner.setManager(this);
 		combiner.setFs(fs);
-		combiner.setNodeId(getNodeId());
+		combiner.setReduceCombineJob(rcJob);
 
 		combiner.start();
 	}
