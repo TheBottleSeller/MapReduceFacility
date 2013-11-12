@@ -130,8 +130,8 @@ public class JobScheduler {
 				} else {
 					boolean success = false;
 					try {
-						mapper.runCombineJob(nodeToBlocks.get(mapperId), job.getFilename(), jobId,
-							job.getMaxKey(), job.getMinKey(), job.getNumBlocks());
+						MapCombineJob mcJob = new MapCombineJob(job, nodeToBlocks.get(mapperId));
+						mapper.runMapCombineJob(mcJob);
 						success = true;
 					} catch (RemoteException e) {
 						// TODO Auto-generated catch block

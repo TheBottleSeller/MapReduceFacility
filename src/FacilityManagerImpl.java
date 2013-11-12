@@ -198,28 +198,17 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runCombineJob(Set<Integer> blockIndices, String filename, int jobId, int maxKey,
-		int minKey, int numReducers) throws RemoteException {
+	public boolean runMapCombineJob(MapCombineJob mcJob) throws RemoteException {
 
 		boolean success = false;
 		MapCombiner440 combiner = new MapCombiner440();
 
 		combiner.setMaster(master);
 		combiner.setFs(fs);
-		combiner.setJobId(jobId);
-		combiner.setNodeId(getNodeId());
-		combiner.setBlockIndices(blockIndices);
-		combiner.setFilename(filename);
-		combiner.setMaxKey(maxKey);
-		combiner.setMinKey(minKey);
-		combiner.setNumReducers(numReducers);
-
-		try {
-			combiner.init();
-			success = true;
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
+		combiner.setMapCombineJob(mcJob);
+		combiner.start();
+		
+		success = true;
 
 		return success;
 	}

@@ -17,8 +17,7 @@ public interface FacilityManager extends Remote {
 
 	public boolean runMapJob(MapJob mapJob) throws RemoteException;
 
-	public boolean runCombineJob(Set<Integer> blockIndices, String namespace, int jobId,
-		int maxKey, int minKey, int numReducers) throws RemoteException;
+	public boolean runMapCombineJob(MapCombineJob mcJob) throws RemoteException;
 
 	public boolean runReduceJob(ReduceJob reduceJob) throws RemoteException;
 
