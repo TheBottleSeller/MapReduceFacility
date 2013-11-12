@@ -1,10 +1,6 @@
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileReader;
 import java.io.IOException;
-import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -15,7 +11,6 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.HashSet;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -186,7 +181,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			mapper.setFS(fs);
 			mapper.setMapJob(mapJob);
 			mapper.setNodeId(getNodeId());
-			
+
 			mapper.start();
 			success = true;
 		} catch (InstantiationException e) {
@@ -198,8 +193,8 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runCombineJob(Set<Integer> blockIndices, String filename, int jobId, int maxKey,
-		int minKey, int numReducers) throws RemoteException {
+	public boolean runMapCombineJob(Set<Integer> blockIndices, String filename, int jobId,
+		int maxKey, int minKey, int numReducers) throws RemoteException {
 
 		boolean success = false;
 		MapCombiner440 combiner = new MapCombiner440();
@@ -247,53 +242,19 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean combineReduces(final MapReduceJob job) throws RemoteException {
-		// Gather reduceFiles.
-		final Set<File> reduceFiles = new HashSet<File>();
+	public void runReduceCombineJob(final MapReduceJob job) throws RemoteException {
+		// Gather and combine reduce files using ReduceCombiner440.
+		ReduceCombiner440 combiner = new ReduceCombiner440();
 
-		int numPartitions = job.getNumPartitions();
-		for (int partitionNo = 0; partitionNo < numPartitions; partitionNo++) {
-			final int pNo = partitionNo;
-			Thread reductionRetriever = new Thread(new Runnable() {
-				@Override
-				public void run() {
+		combiner.setManager(this);
+		combiner.setFs(fs);
+		combiner.setNodeId(getNodeId());
 
-					// blocks until the file is retrieved
-					File reduceFile = fs.getFile(job.getFilename(), job.getId(),
-						FS.FileType.REDUCER_OUT, pNo, job.getReducer(pNo));
-					reduceFiles.add(reduceFile);
-					notifyAll();
-				}
-			});
-			reductionRetriever.start();
-		}
+		combiner.start();
+	}
 
-		while (reduceFiles.size() != numPartitions) {
-			try {
-				wait();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
-
-		// Combine reduceFiles.
-		File output = null;
-		try {
-			output = fs.makeFinalOutputFile(job.getFilename(), job.getId());
-			PrintWriter writer = new PrintWriter(new FileOutputStream(output));
-			for (File reduceFile : reduceFiles) {
-				String line;
-				BufferedReader reader = new BufferedReader(new FileReader(reduceFile));
-				while ((line = reader.readLine()) != null) {
-					writer.write(line);
-				}
-				reader.close();
-			}
-			writer.close();
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-
+	@Override
+	public boolean outputFinished(File output) {
 		// Upload final output file.
 		if (output == null) {
 			return false;

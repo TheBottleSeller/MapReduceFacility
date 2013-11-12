@@ -130,7 +130,7 @@ public class JobScheduler {
 				} else {
 					boolean success = false;
 					try {
-						mapper.runCombineJob(nodeToBlocks.get(mapperId), job.getFilename(), jobId,
+						mapper.runMapCombineJob(nodeToBlocks.get(mapperId), job.getFilename(), jobId,
 							job.getMaxKey(), job.getMinKey(), job.getNumBlocks());
 						success = true;
 					} catch (RemoteException e) {
@@ -218,7 +218,7 @@ public class JobScheduler {
 			System.out.println("Found worker to combine reduces: " + minWorker);
 			
 			// Gather reduction files, combine them, and upload the results.
-			master.getManager(minWorker).combineReduces(job);
+			master.getManager(minWorker).runReduceCombineJob(job);
 		}
 	}
 }
