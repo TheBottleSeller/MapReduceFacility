@@ -1,3 +1,4 @@
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -24,5 +25,7 @@ public interface FacilityManager extends Remote {
 	void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
 		throws FileNotFoundException, RemoteException;
 
-	boolean combineReduces(MapReduceJob job) throws RemoteException;
+	public void runReduceCombineJob(MapReduceJob job) throws RemoteException;
+
+	public boolean outputFinished(File output) throws RemoteException;
 }

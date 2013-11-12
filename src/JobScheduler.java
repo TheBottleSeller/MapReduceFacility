@@ -218,7 +218,7 @@ public class JobScheduler {
 			System.out.println("Found worker to combine reduces: " + minWorker);
 			
 			// Gather reduction files, combine them, and upload the results.
-			master.getManager(minWorker).combineReduces(job);
+			master.getManager(minWorker).runReduceCombineJob(job);
 		}
 	}
 }
