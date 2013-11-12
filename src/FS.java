@@ -670,79 +670,38 @@ public class FS {
 	public String createMappedDataFilePath(String filename, int jobId, int blockIndex)
 		throws RemoteException {
 		return getDataRoot()
-			+ createMappedDataFilename(filename, jobId, blockIndex, manager.getNodeId());
-	}
-
-	public String createPartitionDataFilePath(String filename, int jobId, int partitionNo,
-		int nodeId) {
-		return getDataRoot() + createPartitionDataFilename(filename, jobId, partitionNo, nodeId);
+			+ createFilename(filename, jobId, FileType.MAPPED, blockIndex, manager.getNodeId());
 	}
 
 	public String createReducerInputFilePath(String filename, int jobId, int partitionNo)
 		throws RemoteException {
 		return getDataRoot()
-			+ createReducerInputFilename(filename, jobId, partitionNo, manager.getNodeId());
+			+ createFilename(filename, jobId, FileType.REDUCER_IN, partitionNo, manager.getNodeId());
 	}
 
 	public String createReducerOutputFilePath(String filename, int jobId, int partitionNo)
 		throws RemoteException {
 		return getDataRoot()
-			+ createReducerOutputFilename(filename, jobId, partitionNo, manager.getNodeId());
+			+ createFilename(filename, jobId, FileType.REDUCER_OUT, partitionNo,
+				manager.getNodeId());
 	}
 
 	public String createFinalOutputFilePath(String filename, int jobId) throws RemoteException {
-		return getDataRoot() + createFinalOutputFilename(filename, jobId);
+		return getDataRoot() + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
 	}
 
-	private String createFinalOutputFilename(String filename, int jobId) {
-		return createFilename(filename, jobId, FileType.FINAL_OUTPUT);
-	}
-
-	private String createReducerInputFilename(String filename, int jobId, int partitionNo,
-		int nodeId) {
-		return createFilename(filename, jobId, FileType.REDUCER_IN, partitionNo, nodeId);
-	}
-
-	private String createReducerOutputFilename(String filename, int jobId, int partitionNo,
-		int nodeId) {
-		return createFilename(filename, jobId, FileType.REDUCER_OUT, partitionNo, nodeId);
-	}
-
+	// TODO: ONLY USED ONCE.
 	public String createClassFilePath(String filename) {
 		return String.format("%s%s%s.class", getRoot(), CLASS_PATH, filename);
 	}
 
-	public String createReduceOutputFilePath(int jobId, String filename, int nodeId) {
-		return getDataRoot() + createReduceOutputFilename(jobId, filename, nodeId);
-	}
-
+	// TODO: ONLY USED ONCE.
 	public String createFilename(String filename, int jobId, FileType fileType) {
 		return String.format("%s-%s-jobId-%d", filename, fileType.toString());
-	}
-
-	public String createFilename(String filename, int jobId, FileType fileType, int nodeId) {
-		return String.format("%s-%s-jobId-%d-node-%d", filename, fileType.toString(), nodeId);
 	}
 
 	public String createFilename(String filename, int jobId, FileType type, int partNo, int nodeId) {
 		return String.format("%s-%s-jobId-%d-part-%d-node-%d", filename, type.toString(), partNo,
 			nodeId);
-	}
-
-	public String createReduceOutputFilename(int jobId, String filename, int nodeId) {
-		return createFilename(filename, jobId, FileType.REDUCER_OUT, nodeId);
-	}
-
-	public String createMappedDataFilename(String filename, int jobId, int blockIndex, int nodeId) {
-		return createFilename(filename, jobId, FileType.MAPPED, blockIndex, nodeId);
-	}
-
-	public String createPartitionDataFilename(String filename, int jobId, int partitionNo,
-		int nodeId) {
-		return createFilename(filename, jobId, FileType.PARTITION, partitionNo, nodeId);
-	}
-
-	public String createClassFilename(String filename) {
-		return String.format("%s.class", filename);
 	}
 }
