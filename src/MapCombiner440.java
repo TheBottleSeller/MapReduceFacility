@@ -28,7 +28,6 @@ public class MapCombiner440 extends Thread {
 			for (int i = 0; i < mcJob.getNumPartitions(); i++) {
 				File partitionFile = fs.makePartitionFileBlock(mcJob.getFilename(), mcJob.getId(),
 					i);
-				System.out.println(partitionFile.getAbsolutePath());
 				partitionWriters.put(i, new RecordWriter(partitionFile));
 			}
 
@@ -49,8 +48,6 @@ public class MapCombiner440 extends Thread {
 				while ((kvPair = blockReader.readKeyValue()) != null) {
 					int partitionNo = partition(kvPair.getKey().hashCode());
 					partitionWriter = partitionWriters.get(partitionNo);
-					System.out.println("Writing " + kvPair.toString() + " to partition "
-						+ partitionNo);
 					partitionWriter.writeKeyValues(kvPair.getKey(), kvPair.getValue());
 				}
 				blockReader.close();

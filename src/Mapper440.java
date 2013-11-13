@@ -29,10 +29,8 @@ public abstract class Mapper440 extends Thread {
 			RecordWriter writer = new RecordWriter(outFile);
 
 			while ((record = reader.readLine()) != null) {
-				System.out.println("input record = " + record);
 				List<KVPair<String, String>> mappedRecord = map(record);
 				for (KVPair<String, String> kvPair : mappedRecord) {
-					System.out.println("intermediate record = " + kvPair);
 					int keyHash = kvPair.getKey().hashCode();
 					mapJob.updateMaxMinKey(keyHash);
 					writer.writeKeyValues(kvPair.getKey(), kvPair.getValue());

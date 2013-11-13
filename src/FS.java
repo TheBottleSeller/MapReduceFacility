@@ -23,7 +23,7 @@ import java.util.Set;
 
 public class FS {
 
-	private static final String DATA_PATH = "data440/";
+	private static final String DATA_PATH = "/tmp/data440/";
 	private static final String CLASS_PATH = "class440/";
 
 	private static int WRITE_PORT = 8083;
@@ -46,7 +46,6 @@ public class FS {
 	};
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
-		//DATA_PATH = DATA_PATH + "-" + manager.getNodeId() + "/";
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
 		partitionFiles = Collections.synchronizedMap(new HashMap<Integer, Set<File>>());
 		this.manager = manager;
@@ -59,7 +58,7 @@ public class FS {
 
 		// Set up root directories.
 		createRootDirectory(DATA_PATH);
-		createRootDirectory(CLASS_PATH);
+		createRootDirectory(getRoot() + CLASS_PATH);
 	}
 
 	public String getRoot() {
@@ -67,11 +66,11 @@ public class FS {
 	}
 
 	public String getDataRoot() {
-		return getRoot() + DATA_PATH;
+		return DATA_PATH;
 	}
 
 	private void createRootDirectory(String path) {
-		File root = new File(getRoot() + path);
+		File root = new File(path);
 		if (root.exists() || !root.isDirectory()) {
 			root.delete();
 		}
@@ -173,11 +172,18 @@ public class FS {
 	public File getFile(String filename, int jobId, FileType type, int partNo, int fromNode) {
 		String requestedFilename = createFilename(filename, jobId, type, partNo, fromNode);
 		File localFile = new File(getDataRoot() + requestedFilename);
-		if (localFile.exists()) {
-//			System.out.println("Deleting file " + localFile.getAbsolutePath());
-//			localFile.delete();
-			return localFile;
+		try {
+			if (fromNode == manager.getNodeId()) {
+				return localFile;
+			}
+		} catch (RemoteException e) {
+			e.printStackTrace();
 		}
+
+		if (localFile.exists()) {
+			localFile.delete();
+		}
+
 		boolean success = false;
 		try {
 			localFile.createNewFile();
@@ -195,14 +201,17 @@ public class FS {
 				out.flush();
 
 				boolean hasFile = in.readBoolean();
+				System.out.println("hasFile = " + hasFile);
 
 				if (hasFile) {
 					int numBytes = 0;
-					while ((numBytes = in.readInt()) != -1) {
+					while ((numBytes = in.readInt()) > 0) {
 						byte[] bytes = new byte[numBytes];
-						in.read(bytes);
-						fos.write(bytes);
+						in.readFully(bytes, 0, numBytes);
+						fos.write(bytes, 0, numBytes);
+						System.out.print("numBytes = " + numBytes + ", bytes = " + bytes);
 					}
+
 					fos.flush();
 					success = true;
 				}
@@ -219,6 +228,7 @@ public class FS {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
 		if (success) {
 			return localFile;
 		} else {
@@ -616,12 +626,13 @@ public class FS {
 
 					byte[] bytes = new byte[1024];
 					int numBytesRead = 0;
-					while ((numBytesRead = fin.read(bytes)) != -1) {
+					while ((numBytesRead = fin.read(bytes)) > 0) {
 						out.writeInt(numBytesRead);
 						out.write(bytes);
 						out.flush();
 					}
 					out.writeInt(numBytesRead);
+
 					out.flush();
 					fin.close();
 					socket.close();
@@ -634,8 +645,6 @@ public class FS {
 		}
 
 	}
-
-	// TODO: REFACTOR THIS!!!
 
 	public String createDataFilePath(String filename, int blockIndex) {
 		return getDataRoot() + String.format("%s-%d.pt", filename, blockIndex);

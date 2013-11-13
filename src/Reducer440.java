@@ -109,7 +109,6 @@ public abstract class Reducer440 extends Thread {
 			}
 
 			currentKVPairs.put(partition, pairs);
-			System.out.println("currentKVPairs = " + currentKVPairs.values().toString());
 		}
 
 		partitionFiles.removeAll(emptyPartitions);
@@ -182,11 +181,7 @@ public abstract class Reducer440 extends Thread {
 		RecordReader reader = new RecordReader(reduceInput);
 		KVPairs<String, String> kvPairs;
 		while ((kvPairs = reader.readKeyMultiValues()) != null) {
-			System.out.print("key = " + kvPairs.getKey() + ", values = "
-				+ Arrays.toString(kvPairs.getValue().toArray()));
-
 			KVPair<String, String> reduction = reduce(kvPairs);
-
 			writer.writeKeyValues(reduction.getKey(), reduction.getValue());
 		}
 		writer.close();
