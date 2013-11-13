@@ -105,6 +105,7 @@ public class JobScheduler {
 		int jobId = mapJob.getId();
 		boolean mapPhaseFinished = activeJobs.get(jobId).mapFinished(mapJob);
 		if (mapPhaseFinished) {
+			
 			// Start combine phase on all of the mappers
 			MapReduceJob job = activeJobs.get(jobId);
 			
@@ -176,7 +177,7 @@ public class JobScheduler {
 				mappers.add(mapperId);
 			}
 
-			// issue reduce jobs to each reducer
+			// issue combine jobs to each mapper
 			System.out.println("Scheduled reducers");
 			int numPartitions = blockLocations.size();
 			Class<?> clazz = job.getUserDefinedClass();
@@ -195,7 +196,7 @@ public class JobScheduler {
 					// TODO: What happens here..?
 				}
 			}
-			System.out.println("running map jobs");
+			System.out.println("running reduce jobs");
 		}
 	}
 

@@ -29,7 +29,7 @@ public class ReduceCombiner440 extends Thread {
 				String line;
 				BufferedReader reader = new BufferedReader(new FileReader(reduceFile));
 				while ((line = reader.readLine()) != null) {
-					writer.write(line);
+					writer.println(line);
 				}
 				reader.close();
 			}

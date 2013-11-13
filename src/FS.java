@@ -46,6 +46,7 @@ public class FS {
 	};
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
+		//DATA_PATH = DATA_PATH + "-" + manager.getNodeId() + "/";
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
 		partitionFiles = Collections.synchronizedMap(new HashMap<Integer, Set<File>>());
 		this.manager = manager;
@@ -71,12 +72,10 @@ public class FS {
 
 	private void createRootDirectory(String path) {
 		File root = new File(getRoot() + path);
-		if (!root.exists()) {
-			root.mkdir();
-		} else if (!root.isDirectory()) {
+		if (root.exists() || !root.isDirectory()) {
 			root.delete();
-			root.mkdirs();
 		}
+		root.mkdirs();
 	}
 
 	public void upload(File file, String namespace) throws IOException {
@@ -175,7 +174,9 @@ public class FS {
 		String requestedFilename = createFilename(filename, jobId, type, partNo, fromNode);
 		File localFile = new File(getDataRoot() + requestedFilename);
 		if (localFile.exists()) {
-			localFile.delete();
+//			System.out.println("Deleting file " + localFile.getAbsolutePath());
+//			localFile.delete();
+			return localFile;
 		}
 		boolean success = false;
 		try {
@@ -189,13 +190,12 @@ public class FS {
 			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 			out.flush();
 
-
 			synchronized (this) {
 				out.writeUTF(requestedFilename);
 				out.flush();
-	
+
 				boolean hasFile = in.readBoolean();
-	
+
 				if (hasFile) {
 					int numBytes = 0;
 					while ((numBytes = in.readInt()) != -1) {
@@ -328,8 +328,7 @@ public class FS {
 
 	public File makePartitionFileBlock(String filename, int jobId, int partitionNo)
 		throws IOException {
-		File partition = new File(createFilename(filename, jobId, FileType.PARTITION, partitionNo,
-			manager.getNodeId()));
+		File partition = new File(createPartitionFilePath(filename, jobId, partitionNo));
 		if (partition.exists()) {
 			partition.delete();
 		}
@@ -339,8 +338,7 @@ public class FS {
 
 	public File getPartitionFileBlock(String filename, int jobId, int partitionNo)
 		throws RemoteException {
-		return new File(createFilename(filename, jobId, FileType.PARTITION, partitionNo,
-			manager.getNodeId()));
+		return new File(createPartitionFilePath(filename, jobId, partitionNo));
 	}
 
 	public File makeReduceInputFile(String filename, int jobId, int partitionNum)
@@ -643,6 +641,12 @@ public class FS {
 		return getDataRoot() + String.format("%s-%d.pt", filename, blockIndex);
 	}
 
+	public String createPartitionFilePath(String filename, int jobId, int partitionNo)
+		throws RemoteException {
+		return getDataRoot()
+			+ createFilename(filename, jobId, FileType.PARTITION, partitionNo, manager.getNodeId());
+	}
+
 	public String createMappedDataFilePath(String filename, int jobId, int blockIndex)
 		throws RemoteException {
 		return getDataRoot()
@@ -677,7 +681,7 @@ public class FS {
 	}
 
 	public String createFilename(String filename, int jobId, FileType type, int partNo, int nodeId) {
-		return String.format("%s-%s-jobId-%d-part-%d-node-%d", filename, type.toString(), jobId, partNo,
-			nodeId);
+		return String.format("%s-%s-jobId-%d-part-%d-node-%d", filename, type.toString(), jobId,
+			partNo, nodeId);
 	}
 }

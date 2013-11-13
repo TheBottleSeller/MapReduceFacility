@@ -11,6 +11,7 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -31,7 +32,6 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	public FacilityManagerImpl(Config config) throws IOException {
 		this.config = config;
 		master = (FacilityManagerMaster) this;
-		fs = new FS(this, master);
 		String[] participants = config.getParticipantIps();
 		for (int i = 0; i < participants.length; i++) {
 			if (participants[i].equals(config.getMasterIp())) {
@@ -39,6 +39,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 				break;
 			}
 		}
+		fs = new FS(this, master);
 	}
 
 	// Constructor used by a slave.
@@ -197,12 +198,13 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 		boolean success = false;
 		MapCombiner440 combiner = new MapCombiner440();
-
+		System.out.println("Combiner " + getNodeId() + " recieved "
+			+ Arrays.toString(mcJob.getBlockIndices().toArray()));
 		combiner.setMaster(master);
 		combiner.setFs(fs);
 		combiner.setMapCombineJob(mcJob);
 		combiner.start();
-		
+
 		success = true;
 
 		return success;
@@ -248,8 +250,9 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		if (output == null) {
 			return false;
 		} else {
+			// TODO uncomment uploadCmd
 			String cmd = String.format("upload %s %s", output.getAbsolutePath(), output.getName());
-			uploadCmd(cmd);
+			//uploadCmd(cmd);
 			return true;
 		}
 	}

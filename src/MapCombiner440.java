@@ -24,18 +24,25 @@ public class MapCombiner440 extends Thread {
 	public void run() {
 		boolean success = false;
 		try {
-			Map<Integer, RecordWriter> partitionWriters = new HashMap<Integer, RecordWriter>(mcJob.getNumPartitions());
+			// Create a RecordWriter for each partition
+			Map<Integer, RecordWriter> partitionWriters = new HashMap<Integer, RecordWriter>(
+				mcJob.getNumPartitions());
 			for (int i = 0; i < mcJob.getNumPartitions(); i++) {
-				File partitionFile = fs.makePartitionFileBlock(mcJob.getFilename(), mcJob.getId(), i);
+				File partitionFile = fs.makePartitionFileBlock(mcJob.getFilename(), mcJob.getId(),
+					i);
+				System.out.println(partitionFile.getAbsolutePath());
 				partitionWriters.put(i, new RecordWriter(partitionFile));
 			}
-	
-			Map<Integer, RecordReader> blockReaders = new HashMap<Integer, RecordReader>(mcJob.getBlockIndices().size());
+
+			// Create a RecordReader for each block
+			Map<Integer, RecordReader> blockReaders = new HashMap<Integer, RecordReader>(mcJob
+				.getBlockIndices().size());
 			for (Integer blockIndex : mcJob.getBlockIndices()) {
-				File blockFile = fs.getMappedFileBlock(mcJob.getFilename(), blockIndex, mcJob.getId());
+				File blockFile = fs.getMappedFileBlock(mcJob.getFilename(), blockIndex,
+					mcJob.getId());
 				blockReaders.put(blockIndex, new RecordReader(blockFile));
 			}
-		
+
 			RecordReader blockReader;
 			RecordWriter partitionWriter;
 			for (Integer blockIndex : mcJob.getBlockIndices()) {
@@ -44,22 +51,24 @@ public class MapCombiner440 extends Thread {
 				while ((kvPair = blockReader.readKeyValue()) != null) {
 					int partitionNo = partition(kvPair.getKey().hashCode());
 					partitionWriter = partitionWriters.get(partitionNo);
+					System.out.println("Writing " + kvPair.toString() + " to partition "
+						+ partitionNo);
 					partitionWriter.writeKeyValues(kvPair.getKey(), kvPair.getValue());
 				}
 				blockReader.close();
 			}
-	
-			// Close all print writers
+
+			// Close all record writers
 			for (RecordWriter writer : partitionWriters.values()) {
 				writer.close();
 			}
-	
+
 			// Read in each partition into memory, sort, and write back to file
 			for (Integer partitionNo : partitionWriters.keySet()) {
-				RecordReader partitionReader = new RecordReader(fs.getPartitionFileBlock(mcJob.getFilename(),
-					mcJob.getId(), partitionNo));
+				RecordReader partitionReader = new RecordReader(fs.getPartitionFileBlock(
+					mcJob.getFilename(), mcJob.getId(), partitionNo));
 				KVPair<String, String> kvPair;
-	
+
 				// Combine values for each key
 				SortedMap<String, List<String>> data = new TreeMap<String, List<String>>();
 				while ((kvPair = partitionReader.readKeyValue()) != null) {
@@ -71,17 +80,17 @@ public class MapCombiner440 extends Thread {
 					values.add(kvPair.getValue());
 				}
 				partitionReader.close();
-	
+
 				// Write aggregate records to disk
-				partitionWriter = new RecordWriter(fs.makePartitionFileBlock(mcJob.getFilename(), mcJob.getId(),
-					partitionNo));
+				partitionWriter = new RecordWriter(fs.makePartitionFileBlock(mcJob.getFilename(),
+					mcJob.getId(), partitionNo));
 				for (String aggregateKey : data.keySet()) {
 					List<String> values = data.get(aggregateKey);
 					partitionWriter.writeKeyMultiValues(aggregateKey, values);
 				}
 				partitionWriter.close();
 			}
-			
+
 			success = true;
 		} catch (IOException e) {
 			e.printStackTrace();
@@ -96,7 +105,8 @@ public class MapCombiner440 extends Thread {
 	}
 
 	private int partition(int key) {
-		int range = mcJob.getMaxKey() - mcJob.getMinKey() / mcJob.getNumPartitions();
+		int range = (int) (Math.ceil((mcJob.getMaxKey() - mcJob.getMinKey())
+			/ (mcJob.getNumPartitions() * 1.0)));
 		int partitionNo = (key - mcJob.getMinKey()) / range;
 		return partitionNo;
 	}
@@ -108,7 +118,7 @@ public class MapCombiner440 extends Thread {
 	public void setFs(FS fs) {
 		this.fs = fs;
 	}
-	
+
 	public void setMapCombineJob(MapCombineJob mcJob) {
 		this.mcJob = mcJob;
 	}
