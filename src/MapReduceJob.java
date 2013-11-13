@@ -62,10 +62,6 @@ public class MapReduceJob {
 		completedMaps++;
 		maxKey = Math.max(maxKey, mapJob.getMaxKey());
 		minKey = Math.min(minKey, mapJob.getMinKey());
-		System.out.println(maxKey);
-		System.out.println(minKey);
-		System.out.println("a".hashCode());
-		System.out.println("b".hashCode());
 		return completedMaps == numBlocks;
 	}
 
@@ -109,7 +105,7 @@ public class MapReduceJob {
 
 	@Override
 	public String toString() {
-		return String.format("id=%d file=%s", id, filename);
+		return String.format("id = %d, file = %s", id, filename);
 	}
 
 }

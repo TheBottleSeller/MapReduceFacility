@@ -1,12 +1,10 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -98,7 +96,7 @@ public class MapCombiner440 extends Thread {
 
 		// tell master that combine phase is done
 		try {
-			master.combineFinished(mcJob.getId(), mcJob.getBlockIndices().size());
+			master.combineFinished(success, mcJob.getId(), mcJob.getBlockIndices().size());
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}

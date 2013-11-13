@@ -178,19 +178,22 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public void mapFinished(MapJob mapJob, int nodeId) throws RemoteException {
+	public void mapFinished(boolean success, MapJob mapJob, int nodeId) throws RemoteException {
 		System.out.println("Mapper finished for block " + mapJob.getBlockIndex());
 		scheduler.mapFinished(mapJob, nodeId);
 	}
 
 	@Override
-	public void combineFinished(int jobId, int blocksCombined) throws RemoteException {
+	public void combineFinished(boolean success, int jobId, int blocksCombined)
+		throws RemoteException {
 		System.out.println("Combiner finished for " + blocksCombined + " blocks");
 		scheduler.combineFinished(jobId, blocksCombined);
 	}
 
 	@Override
-	public void reduceFinished(int jobId) throws FileNotFoundException, RemoteException {
+	public void reduceFinished(boolean success, int jobId) throws FileNotFoundException,
+		RemoteException {
+		System.out.println("Reducer finished");
 		scheduler.reduceFinished(jobId);
 	}
 

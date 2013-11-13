@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -13,7 +12,6 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.Arrays;
 import java.util.Scanner;
-import java.util.Set;
 
 public class FacilityManagerImpl extends Thread implements FacilityManager {
 
@@ -170,49 +168,40 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	@Override
-	public boolean runMapJob(MapJob mapJob) throws RemoteException {
+	public void runMapJob(MapJob mapJob) throws RemoteException {
 		System.out.println("Running local map job");
-		boolean success = false;
 		try {
 			MapReduce440 mr = (MapReduce440) mapJob.getClazz().newInstance();
 			Mapper440 mapper = mr.createMapper();
 
-			// set parameters
 			mapper.setMaster(master);
 			mapper.setFS(fs);
 			mapper.setMapJob(mapJob);
 			mapper.setNodeId(getNodeId());
 
 			mapper.start();
-			success = true;
 		} catch (InstantiationException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
 			e.printStackTrace();
 		}
-		return success;
 	}
 
 	@Override
-	public boolean runMapCombineJob(MapCombineJob mcJob) throws RemoteException {
-
-		boolean success = false;
+	public void runMapCombineJob(MapCombineJob mcJob) throws RemoteException {
 		MapCombiner440 combiner = new MapCombiner440();
 		System.out.println("Combiner " + getNodeId() + " recieved "
 			+ Arrays.toString(mcJob.getBlockIndices().toArray()));
+
 		combiner.setMaster(master);
 		combiner.setFs(fs);
 		combiner.setMapCombineJob(mcJob);
+
 		combiner.start();
-
-		success = true;
-
-		return success;
 	}
 
 	@Override
-	public boolean runReduceJob(ReduceJob reduceJob) throws RemoteException {
-		boolean success = false;
+	public void runReduceJob(ReduceJob reduceJob) throws RemoteException {
 		MapReduce440 mr;
 		try {
 			mr = (MapReduce440) reduceJob.getClazz().newInstance();
@@ -223,13 +212,11 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			reducer.setReduceJob(reduceJob);
 
 			reducer.start();
-			success = true;
 		} catch (InstantiationException e) {
 			e.printStackTrace();
 		} catch (IllegalAccessException e) {
 			e.printStackTrace();
 		}
-		return success;
 	}
 
 	@Override
@@ -251,16 +238,10 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			return false;
 		} else {
 			// TODO uncomment uploadCmd
-			String cmd = String.format("upload %s %s", output.getAbsolutePath(), output.getName());
-			//uploadCmd(cmd);
+			// String cmd = String.format("upload %s %s", output.getAbsolutePath(), output.getName());
+			// uploadCmd(cmd);
 			return true;
 		}
-	}
-
-	@Override
-	public void sendFile(String localFilepath, String remoteFilename, String nodeAddress)
-		throws FileNotFoundException {
-		// fs.sendFile(localFilepath, remoteFilename, nodeAddress);
 	}
 
 }

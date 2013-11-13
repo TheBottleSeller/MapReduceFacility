@@ -38,15 +38,15 @@ public abstract class Mapper440 extends Thread {
 					writer.writeKeyValues(kvPair.getKey(), kvPair.getValue());
 				}
 			}
-			success = true;
-			writer.close();
 			reader.close();
+			writer.close();
+			success = true;
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		try {
-			master.mapFinished(mapJob, nodeId);
+			master.mapFinished(success, mapJob, nodeId);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}

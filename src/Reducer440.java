@@ -1,5 +1,7 @@
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -22,9 +24,10 @@ public abstract class Reducer440 extends Thread {
 
 	@Override
 	public void run() {
+		boolean success = false;
+
 		// gather files blocks while partition files are obtained
 		partitionFiles = gatherFiles();
-
 		try {
 			// merge partition files
 			File reduceInput = mergeSortPartitions(partitionFiles);
@@ -32,9 +35,17 @@ public abstract class Reducer440 extends Thread {
 			// run reduce on merged file
 			runReduce(reduceInput);
 
-			// tell master that reduce job is finished
-			master.reduceFinished(job.getId());
+			success = true;
 		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		// tell master that reduce job is finished
+		try {
+			master.reduceFinished(success, job.getId());
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
 	}

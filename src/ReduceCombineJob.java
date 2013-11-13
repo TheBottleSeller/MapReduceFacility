@@ -1,4 +1,5 @@
 
+
 public class ReduceCombineJob extends NodeJob {
 
 	private static final long serialVersionUID = 15243672L;
