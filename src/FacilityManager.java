@@ -13,6 +13,8 @@ public interface FacilityManager extends Remote {
 	public void exit() throws RemoteException;
 
 	public int dispatchJob(Class<?> clazz, String filename) throws RemoteException;
+	
+	public void runJob(NodeJob job) throws RemoteException;
 
 	public void runMapJob(MapJob mapJob) throws RemoteException;
 

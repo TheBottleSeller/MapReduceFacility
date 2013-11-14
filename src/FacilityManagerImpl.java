@@ -166,6 +166,21 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			config.getMasterIp());
 		return master.dispatchJob(clazz, filename);
 	}
+	
+	@Override
+	public void runJob(NodeJob job) throws RemoteException {
+		if (job instanceof MapJob) {
+			runMapJob((MapJob) job);
+		} else if (job instanceof MapCombineJob) {
+			runMapCombineJob((MapCombineJob) job);
+		} else if(job instanceof ReduceJob) {
+			runReduceJob((ReduceJob) job);
+		} else if (job instanceof ReduceCombineJob) {
+			runReduceCombineJob((ReduceCombineJob) job);
+		} else {
+			System.out.println("Error");
+		}
+	}
 
 	@Override
 	public void runMapJob(MapJob mapJob) throws RemoteException {

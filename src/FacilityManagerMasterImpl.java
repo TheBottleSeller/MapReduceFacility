@@ -49,7 +49,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 			Thread.sleep(1000);
 		}
 		healthChecker = new HealthChecker(this, expectedNumParticipants);
-		scheduler = new JobScheduler(this, expectedNumParticipants);
+		scheduler = new JobScheduler(this, config);
 		healthChecker.start();
 
 		System.out.println("All slaves connected.");
@@ -178,6 +178,13 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
+	public void jobFinished(boolean success, NodeJob job) throws RemoteException {
+		if (!success) {
+
+		}
+	}
+
+	@Override
 	public void mapFinished(boolean success, MapJob mapJob, int nodeId) throws RemoteException {
 		System.out.println("Mapper finished for block " + mapJob.getBlockIndex());
 		scheduler.mapFinished(mapJob, nodeId);
@@ -197,7 +204,8 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		scheduler.reduceFinished(jobId);
 	}
 
-	public Map<Integer, Set<Integer>> getBlockLocations(String filename) {
+	@Override
+	public Map<Integer, Set<Integer>> getBlockLocations(String filename) throws RemoteException {
 		return fsTable.get(filename);
 	}
 

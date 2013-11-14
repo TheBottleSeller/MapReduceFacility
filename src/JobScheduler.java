@@ -10,17 +10,25 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class JobScheduler {
 
 	private FacilityManagerMasterImpl master;
+	private Config config;
 	private Map<Integer, MapReduceJob> activeJobs;
 	private Map<Integer, MapReduceJob> completedJobs;
 	private AtomicInteger[] activeMaps;
 	private AtomicInteger[] activeReduces;
 	private AtomicInteger totalJobs;
 	private Map<Integer, Set<NodeJob>> activeNodeJobs;
+	private JobDispatcher jobDispatcher;
+	
+	private int maxMaps;
+	private int maxReduces;
 
-	public JobScheduler(FacilityManagerMasterImpl master, int numParticipants) {
+	public JobScheduler(FacilityManagerMasterImpl master, Config config) {
 		this.master = master;
+		this.maxMaps = config.getMaxMapsPerHost();
+		this.maxReduces = config.getMaxReducesPerHost();
 		activeJobs = Collections.synchronizedMap(new HashMap<Integer, MapReduceJob>());
 		completedJobs = Collections.synchronizedMap(new HashMap<Integer, MapReduceJob>());
+		int numParticipants = config.getParticipantIps().length;
 		activeMaps = new AtomicInteger[numParticipants];
 		activeReduces = new AtomicInteger[numParticipants];
 		activeNodeJobs = Collections.synchronizedMap(new HashMap<Integer, Set<NodeJob>>());
@@ -46,6 +54,65 @@ public class JobScheduler {
 
 	public synchronized void incrementActiveReduces(int nodeId) {
 		activeReduces[nodeId].incrementAndGet();
+	}
+
+	public void renewJob(NodeJob job) {
+		MapReduceJob mrJob = activeJobs.get(job.getId());
+		if (job instanceof MapJob) {
+			renewMapJob((MapJob) job);
+		} else if (job instanceof MapCombineJob) {
+			
+		} else if (job instanceof ReduceJob) {
+
+		} else if (job instanceof ReduceCombineJob) {
+
+		} else {
+			System.out.println("Error");
+		}
+	}
+
+	public void renewMapJob(MapJob job) {
+		try {
+			Map<Integer, Set<Integer>> blockLocations = master.getBlockLocations(job.getFilename());
+			Set<Integer> nodes = blockLocations.get(job.getBlockIndex());
+			nodes.removeAll(getMaxedMappers(nodes));
+			
+			if (nodes.isEmpty()) {
+				// TODO this is where we send a map job to a mapper without the block
+				// needs to getFile it, this should be handled on the job recieving side
+				
+				// get the minimum worker across all nodes
+				int numParticipants = config.getParticipantIps().length;
+				for (int i = 0; i < numParticipants; i++) {
+					nodes.add(i);
+				}
+				// remove maxed mappers again
+				nodes.removeAll(getMaxedMappers(nodes));
+				if (nodes.isEmpty()) {
+					// re-queue the job
+					jobDispatcher.enqueue(job);
+				} else {
+					int nodeId = findMinWorker(nodes);
+					master.getManager(nodeId).runJob(job);
+				}
+			} else {
+				// get min worker and run job
+				int nodeId = findMinWorker(nodes);
+				master.getManager(nodeId).runJob(job);
+			}
+		} catch (RemoteException e) {
+			e.printStackTrace();
+		}
+	}
+	
+	public Set<Integer> getMaxedMappers(Set<Integer> nodeIds) {
+		Set<Integer> maxedNodes = new HashSet<Integer>();
+		for (int nodeId : nodes) {
+			if (getNumMappers(nodeId) >= maxMaps) {
+				maxedNodes.add(nodeId);
+			}
+		}
+		return maxedNodes;
 	}
 
 	public int findMinWorker(Set<Integer> nodeIds) {
@@ -147,7 +214,12 @@ public class JobScheduler {
 			System.out.println("Scheduler issuing reduces");
 
 			// distribute reducers amongst participants
-			Map<Integer, Set<Integer>> blockLocations = master.getBlockLocations(job.getFilename());
+			Map<Integer, Set<Integer>> blockLocations = null;
+			try {
+				blockLocations = master.getBlockLocations(job.getFilename());
+			} catch (RemoteException e1) {
+				e1.printStackTrace();
+			}
 			for (int blockIndex : blockLocations.keySet()) {
 				int minWorker = findMinWorker(blockLocations.get(blockIndex));
 				if (minWorker == -1) {

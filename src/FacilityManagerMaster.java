@@ -17,6 +17,10 @@ public interface FacilityManagerMaster extends FacilityManager, Remote {
 	public void updateFSTable(String namespace, int blockIndex, int nodeId) throws RemoteException;
 
 	public boolean hasDistributedFile(String filename) throws RemoteException;
+	
+	public Map<Integer, Set<Integer>> getBlockLocations(String filename) throws RemoteException;
+	
+	public void jobFinished(boolean success, NodeJob job) throws RemoteException;
 
 	public void mapFinished(boolean success, MapJob mapJob, int nodeId) throws RemoteException;
 
