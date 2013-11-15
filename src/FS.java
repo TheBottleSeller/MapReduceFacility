@@ -26,8 +26,8 @@ public class FS {
 	private static final String DATA_PATH = "/tmp/data440/";
 	private static final String CLASS_PATH = "class440/";
 
-	private static int WRITE_PORT = 8083;
-	private static int READ_PORT = 8084;
+	private static int writePort;
+	private static int readPort;
 
 	private Map<String, Set<Integer>> localFiles;
 	private Map<Integer, Set<File>> partitionFiles;
@@ -50,7 +50,12 @@ public class FS {
 		partitionFiles = Collections.synchronizedMap(new HashMap<Integer, Set<File>>());
 		this.manager = manager;
 		this.master = master;
-		blockSize = manager.getConfig().getBlockSize();
+
+		Config config = manager.getConfig();
+		blockSize = config.getBlockSize();
+		readPort = config.getFsReadPort();
+		writePort = config.getFsWritePort();
+
 		writeServer = new WriteServer();
 		writeServer.start();
 		readServer = new ReadServer();
@@ -190,7 +195,7 @@ public class FS {
 			String nodeAddress = manager.getConfig().getNodeAddress(fromNode);
 			FileOutputStream fos = new FileOutputStream(localFile);
 
-			Socket socket = new Socket(nodeAddress, READ_PORT);
+			Socket socket = new Socket(nodeAddress, readPort);
 
 			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
 			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
@@ -242,7 +247,7 @@ public class FS {
 		boolean success = false;
 		try {
 			nodeAddress = manager.getConfig().getParticipantIps()[nodeId];
-			Socket socket = new Socket(nodeAddress, WRITE_PORT);
+			Socket socket = new Socket(nodeAddress, writePort);
 
 			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
 			ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
@@ -271,7 +276,7 @@ public class FS {
 	public boolean remoteWriteClass(InputStream is, String namespace, String nodeAddress) {
 		boolean success = false;
 		try {
-			Socket socket = new Socket(nodeAddress, WRITE_PORT);
+			Socket socket = new Socket(nodeAddress, writePort);
 
 			ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
 			out.flush();
@@ -433,7 +438,7 @@ public class FS {
 		private ServerSocket serverSocket;
 
 		public WriteServer() throws IOException {
-			serverSocket = new ServerSocket(WRITE_PORT);
+			serverSocket = new ServerSocket(writePort);
 		}
 
 		@Override
@@ -584,7 +589,7 @@ public class FS {
 		private ServerSocket serverSocket;
 
 		public ReadServer() throws IOException {
-			serverSocket = new ServerSocket(READ_PORT);
+			serverSocket = new ServerSocket(readPort);
 		}
 
 		@Override

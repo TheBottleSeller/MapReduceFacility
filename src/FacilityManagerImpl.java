@@ -16,6 +16,11 @@ import java.util.Scanner;
 public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 	private static final String PROMPT = "=> ";
+	private static final String VALID_COMMANDS = "Valid commands:\n"
+		+ "upload <filename> <namespace> \t upload a file to the DFS.\n"
+		+ "mapreduce <class-filename> <input-file-namespace> \t run the specified mapreduce."
+		+ "ps \t list all active/completed mapreduces.";
+
 	protected static String REGISTRY_MASTER_KEY = "MASTER";
 	protected static String REGISTRY_SLAVE_KEY = "SLAVE_HEALTH";
 
@@ -67,10 +72,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 				// Exit the system.
 				exit();
 			} else {
-				System.out
-					.println("Commands:\n"
-						+ "upload <filename> <namespace>\tupload a file to the DFS.\n"
-						+ "mapreduce <class-filename> <input-file-namespace>\trun the specified mapreduce.");
+				System.out.println(VALID_COMMANDS);
 			}
 		}
 	}
@@ -166,14 +168,14 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			config.getMasterIp());
 		return master.dispatchJob(clazz, filename);
 	}
-	
+
 	@Override
 	public void runJob(NodeJob job) throws RemoteException {
 		if (job instanceof MapJob) {
 			runMapJob((MapJob) job);
 		} else if (job instanceof MapCombineJob) {
 			runMapCombineJob((MapCombineJob) job);
-		} else if(job instanceof ReduceJob) {
+		} else if (job instanceof ReduceJob) {
 			runReduceJob((ReduceJob) job);
 		} else if (job instanceof ReduceCombineJob) {
 			runReduceCombineJob((ReduceCombineJob) job);
@@ -253,7 +255,8 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			return false;
 		} else {
 			// TODO uncomment uploadCmd
-			// String cmd = String.format("upload %s %s", output.getAbsolutePath(), output.getName());
+			// String cmd = String.format("upload %s %s", output.getAbsolutePath(),
+			// output.getName());
 			// uploadCmd(cmd);
 			return true;
 		}

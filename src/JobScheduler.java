@@ -107,7 +107,7 @@ public class JobScheduler {
 	
 	public Set<Integer> getMaxedMappers(Set<Integer> nodeIds) {
 		Set<Integer> maxedNodes = new HashSet<Integer>();
-		for (int nodeId : nodes) {
+		for (int nodeId : nodeIds) {
 			if (getNumMappers(nodeId) >= maxMaps) {
 				maxedNodes.add(nodeId);
 			}

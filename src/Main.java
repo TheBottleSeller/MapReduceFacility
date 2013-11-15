@@ -3,15 +3,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.lang.Thread.UncaughtExceptionHandler;
-import java.rmi.AlreadyBoundException;
-import java.rmi.NotBoundException;
 
 public class Main {
 
 	public static FacilityManager master;
 
-	public static void main(String[] args) throws IOException, NotBoundException,
-		AlreadyBoundException, InterruptedException {
+	public static void main(String[] args) throws Exception {
 		FacilityManagerImpl facilityManager;
 		if (args.length == 2) {
 			// FacilityManager should behaves as the master.
@@ -29,8 +26,8 @@ public class Main {
 				Thread.sleep(1000);
 			}
 		} else {
-			System.out.println("Usage: FacilityManager -m <configFile> for masters and "
-				+ "FacilityManager -s <hostname> for participants.");
+			System.out
+				.println("Usage: -m <configFile> for masters and -s <hostname> -p <port> for participants.");
 			return;
 		}
 	}
