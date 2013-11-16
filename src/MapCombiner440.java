@@ -93,7 +93,7 @@ public class MapCombiner440 extends Thread {
 
 		// tell master that combine phase is done
 		try {
-			master.combineFinished(success, mcJob.getId(), mcJob.getBlockIndices().size());
+			master.jobFinished(success, mcJob);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}

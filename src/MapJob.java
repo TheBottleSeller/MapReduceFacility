@@ -11,8 +11,8 @@ public class MapJob extends NodeJob implements Serializable {
 	private int maxKey;
 	private int minKey;
 	
-	public MapJob(int jobId, String filename, int blockIndex, Class<?> clazz) {
-		super(jobId, filename);
+	public MapJob(int jobId, int nodeId, String filename, int blockIndex, Class<?> clazz) {
+		super(jobId, nodeId, filename);
 		this.blockIndex = blockIndex;
 		this.clazz = clazz;
 		maxKey = Integer.MIN_VALUE;

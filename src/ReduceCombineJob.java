@@ -5,12 +5,12 @@ public class ReduceCombineJob extends NodeJob {
 	private static final long serialVersionUID = 15243672L;
 	
 	private int numPartitions;
-	private int[] reducers;
+	private int[] partitionReducers;
 	
-	public ReduceCombineJob(MapReduceJob job) {
-		super(job.getId(), job.getFilename());
-		numPartitions = job.getNumPartitions();
-		reducers = job.getReducers();
+	public ReduceCombineJob(int jobId, int nodeId, String filename, int numPartitions, int[] partitionReducers) {
+		super(jobId, nodeId, filename);
+		this.numPartitions = numPartitions;
+		this.partitionReducers = partitionReducers;
 	}
 	
 	public int getNumPartitions() {
@@ -18,7 +18,7 @@ public class ReduceCombineJob extends NodeJob {
 	}
 	
 	public int getReducer(int partitionNum) {
-		return reducers[partitionNum];
+		return partitionReducers[partitionNum];
 	}
 	
 }

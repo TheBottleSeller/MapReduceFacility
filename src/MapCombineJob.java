@@ -10,8 +10,8 @@ public class MapCombineJob extends NodeJob {
 	private int minKey;
 	private int numPartitions;
 
-	public MapCombineJob(MapReduceJob job, Set<Integer> blockIndices) {
-		super(job.getId(), job.getFilename());
+	public MapCombineJob(MapReduceProgram job, int nodeId, Set<Integer> blockIndices) {
+		super(job.getId(), nodeId, job.getFilename());
 		this.blockIndices = blockIndices;
 		maxKey = job.getMaxKey();
 		minKey = job.getMinKey();

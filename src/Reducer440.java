@@ -42,10 +42,8 @@ public abstract class Reducer440 extends Thread {
 
 		// tell master that reduce job is finished
 		try {
-			master.reduceFinished(success, job.getId());
+			master.jobFinished(success, job);
 		} catch (RemoteException e) {
-			e.printStackTrace();
-		} catch (FileNotFoundException e) {
 			e.printStackTrace();
 		}
 	}

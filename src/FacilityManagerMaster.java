@@ -21,11 +21,4 @@ public interface FacilityManagerMaster extends FacilityManager, Remote {
 	public Map<Integer, Set<Integer>> getBlockLocations(String filename) throws RemoteException;
 	
 	public void jobFinished(boolean success, NodeJob job) throws RemoteException;
-
-	public void mapFinished(boolean success, MapJob mapJob, int nodeId) throws RemoteException;
-
-	public void combineFinished(boolean success, int jobId, int blocksCombined) throws RemoteException;
-
-	public void reduceFinished(boolean success, int jobId) throws RemoteException, FileNotFoundException;
-
 }

@@ -11,14 +11,16 @@ public class JobScheduler {
 
 	private FacilityManagerMasterImpl master;
 	private Config config;
-	private Map<Integer, MapReduceJob> activeJobs;
-	private Map<Integer, MapReduceJob> completedJobs;
+	private Map<Integer, MapReduceProgram> activePrograms;
+	private Map<Integer, MapReduceProgram> completedPrograms;
 	private AtomicInteger[] activeMaps;
 	private AtomicInteger[] activeReduces;
 	private AtomicInteger totalJobs;
 	private Map<Integer, Set<NodeJob>> activeNodeJobs;
+
 	private JobDispatcher jobDispatcher;
-	
+	private HealthChecker healthChecker;
+
 	private int maxMaps;
 	private int maxReduces;
 
@@ -26,8 +28,8 @@ public class JobScheduler {
 		this.master = master;
 		this.maxMaps = config.getMaxMapsPerHost();
 		this.maxReduces = config.getMaxReducesPerHost();
-		activeJobs = Collections.synchronizedMap(new HashMap<Integer, MapReduceJob>());
-		completedJobs = Collections.synchronizedMap(new HashMap<Integer, MapReduceJob>());
+		activePrograms = Collections.synchronizedMap(new HashMap<Integer, MapReduceProgram>());
+		completedPrograms = Collections.synchronizedMap(new HashMap<Integer, MapReduceProgram>());
 		int numParticipants = config.getParticipantIps().length;
 		activeMaps = new AtomicInteger[numParticipants];
 		activeReduces = new AtomicInteger[numParticipants];
@@ -40,75 +42,109 @@ public class JobScheduler {
 		totalJobs = new AtomicInteger(0);
 	}
 
-	public synchronized int getNumMappers(int nodeId) {
-		return activeMaps[nodeId].get();
-	}
-
-	public synchronized int getNumReducers(int nodeId) {
-		return activeReduces[nodeId].get();
-	}
-
-	public synchronized void incrementActiveMaps(int nodeId) {
-		activeMaps[nodeId].incrementAndGet();
-	}
-
-	public synchronized void incrementActiveReduces(int nodeId) {
-		activeReduces[nodeId].incrementAndGet();
-	}
-
-	public void renewJob(NodeJob job) {
-		MapReduceJob mrJob = activeJobs.get(job.getId());
+	public int findWorker(NodeJob job) {
+		int nodeId = -1;
 		if (job instanceof MapJob) {
-			renewMapJob((MapJob) job);
+			nodeId = findMapper((MapJob) job);
 		} else if (job instanceof MapCombineJob) {
-			
+			nodeId = findMapCombiner((MapCombineJob) job);
 		} else if (job instanceof ReduceJob) {
-
+			nodeId = findReducer((ReduceJob) job);
 		} else if (job instanceof ReduceCombineJob) {
-
+			nodeId = findReduceCombiner((ReduceCombineJob) job);
 		} else {
 			System.out.println("Error");
 		}
+		MapReduceProgram prog = activePrograms.get(job.getId());
+		prog.assignJob(job, nodeId);
+		job.setNodeId(nodeId);
+		return nodeId;
 	}
 
-	public void renewMapJob(MapJob job) {
+	public int findMapper(MapJob job) {
 		try {
 			Map<Integer, Set<Integer>> blockLocations = master.getBlockLocations(job.getFilename());
 			Set<Integer> nodes = blockLocations.get(job.getBlockIndex());
 			nodes.removeAll(getMaxedMappers(nodes));
-			
+
 			if (nodes.isEmpty()) {
 				// TODO this is where we send a map job to a mapper without the block
 				// needs to getFile it, this should be handled on the job recieving side
-				
+
 				// get the minimum worker across all nodes
 				int numParticipants = config.getParticipantIps().length;
 				for (int i = 0; i < numParticipants; i++) {
 					nodes.add(i);
 				}
+
 				// remove maxed mappers again
 				nodes.removeAll(getMaxedMappers(nodes));
-				if (nodes.isEmpty()) {
-					// re-queue the job
-					jobDispatcher.enqueue(job);
-				} else {
-					int nodeId = findMinWorker(nodes);
-					master.getManager(nodeId).runJob(job);
+				if (!nodes.isEmpty()) {
+					return findMinWorker(nodes);
 				}
 			} else {
 				// get min worker and run job
-				int nodeId = findMinWorker(nodes);
-				master.getManager(nodeId).runJob(job);
+				return findMinWorker(nodes);
 			}
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
+		return -1;
 	}
-	
+
+	public int findMapCombiner(MapCombineJob job) {
+		int nodeId = job.getNodeId();
+
+		if (!healthChecker.isHealthy(nodeId)) {
+			nodeId = -1;
+			MapReduceProgram prog = activePrograms.get(job.getId());
+			for (int blockIndex : job.getBlockIndices()) {
+				MapJob mapJob = prog.getMapJob(blockIndex);
+				jobDispatcher.enqueue(mapJob);
+			}
+		}
+		return nodeId;
+	}
+
+	public int findReducer(ReduceJob job) {
+		Set<Integer> allNodes = new HashSet<Integer>();
+
+		int numParticipants = config.getParticipantIps().length;
+		for (int i = 0; i < numParticipants; i++) {
+			allNodes.add(i);
+		}
+
+		allNodes.removeAll(getMaxedReducers(allNodes));
+
+		if (!allNodes.isEmpty()) {
+			return findMinWorker(allNodes);
+		}
+		return -1;
+	}
+
+	public int findReduceCombiner(ReduceCombineJob job) {
+		int numParticipants = config.getParticipantIps().length;
+		Set<Integer> allNodes = new HashSet<Integer>(numParticipants);
+		for (int i = 0; i < numParticipants; i++) {
+			allNodes.add(i);
+		}
+		return findMinWorker(allNodes);
+	}
+
 	public Set<Integer> getMaxedMappers(Set<Integer> nodeIds) {
 		Set<Integer> maxedNodes = new HashSet<Integer>();
-		for (int nodeId : nodes) {
+		for (int nodeId : nodeIds) {
 			if (getNumMappers(nodeId) >= maxMaps) {
+				maxedNodes.add(nodeId);
+			}
+		}
+		return maxedNodes;
+	}
+
+	public Set<Integer> getMaxedReducers(Set<Integer> nodeIds) {
+		Set<Integer> maxedNodes = new HashSet<Integer>();
+		for (int nodeId : nodeIds) {
+			if (getNumReducers(nodeId) >= maxReduces) {
 				maxedNodes.add(nodeId);
 			}
 		}
@@ -130,158 +166,122 @@ public class JobScheduler {
 		return minWorker;
 	}
 
-	public int issueJob(Class<?> clazz, String inputFile, Map<Integer, Set<Integer>> blockLocations) {
+	public int issueJob(Class<?> clazz, String inputFile, int numBlocks) {
 		System.out.println("Scheduler issuing job");
 		int jobId = totalJobs.getAndIncrement();
-		int numBlocks = blockLocations.size();
-		MapReduceJob job = new MapReduceJob(jobId, clazz, inputFile, numBlocks);
-		for (int blockIndex : blockLocations.keySet()) {
-			int minWorker = findMinWorker(blockLocations.get(blockIndex));
-			if (minWorker == -1) {
-				System.out.println("Could not find worker for block " + blockIndex);
-				return -1;
-			}
-			System.out.println("Found worker " + minWorker);
-			job.addMapper(minWorker, blockIndex);
-			incrementActiveMaps(minWorker);
-		}
-		System.out.println("Scheduled mappers");
-		activeJobs.put(jobId, job);
+		
+		MapReduceProgram prog = new MapReduceProgram(jobId, clazz, inputFile, numBlocks,
+			config.getParticipantIps().length);
+		activePrograms.put(jobId, prog);
 
 		for (int blockIndex = 0; blockIndex < numBlocks; blockIndex++) {
-			int nodeId = job.getMapper(blockIndex);
-			System.out.println("Issued node " + nodeId + " with map for block " + blockIndex);
-			FacilityManager manager = master.getManager(nodeId);
-			try {
-				MapJob mapJob = job.createMapJob(blockIndex);
-				activeNodeJobs.get(nodeId).add(mapJob);
-				manager.runMapJob(mapJob);
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
+			MapJob mapJob = prog.createMapJob(blockIndex);
+			jobDispatcher.enqueue(mapJob);
 		}
-		System.out.println("running map jobs");
 		return jobId;
 	}
 
-	public void mapFinished(MapJob mapJob, int nodeId) {
+	public void jobFinished(NodeJob job) {
+		if (job instanceof MapJob) {
+			mapFinished((MapJob) job);
+		} else if (job instanceof MapCombineJob) {
+			mapCombineFinished((MapCombineJob) job);
+		} else if (job instanceof ReduceJob) {
+			reduceFinished((ReduceJob) job);
+		} else if (job instanceof ReduceCombineJob) {
+			reduceCombineFinished((ReduceCombineJob) job);
+		} else {
+			System.out.println("Error");
+		}
+	}
+
+	public void mapFinished(MapJob mapJob) {
 		int jobId = mapJob.getId();
-		boolean mapPhaseFinished = activeJobs.get(jobId).mapFinished(mapJob);
+		MapReduceProgram prog = activePrograms.get(jobId);
+		boolean mapPhaseFinished = prog.mapFinished(mapJob);
 		if (mapPhaseFinished) {
-
 			// Start combine phase on all of the mappers
-			MapReduceJob job = activeJobs.get(jobId);
-
+			
 			// make map of nodeId -> list of blocks mapped on node
-			Map<Integer, Set<Integer>> nodeToBlocks = new HashMap<Integer, Set<Integer>>(
-				job.getNumBlocks());
-			for (int i = 0; i < job.getNumBlocks(); i++) {
-				int mapperId = job.getMapper(i);
-				Set<Integer> blocks = nodeToBlocks.get(mapperId);
-				if (blocks == null) {
-					blocks = new HashSet<Integer>();
-					nodeToBlocks.put(mapperId, blocks);
-				}
-				blocks.add(i);
-			}
+			Map<Integer, Set<Integer>> nodeToBlocks = prog.getNodeToBlocks();
 
 			for (Integer mapperId : nodeToBlocks.keySet()) {
-				FacilityManager mapper = master.getManager(mapperId);
-				if (mapper == null) {
-					// TODO what happens if the mapper is null, need to redo map
-					// job on another machine
-				} else {
-					try {
-						MapCombineJob mcJob = new MapCombineJob(job, nodeToBlocks.get(mapperId));
-						mapper.runMapCombineJob(mcJob);
-					} catch (RemoteException e) {
-						// TODO Auto-generated catch block
-						e.printStackTrace();
-					}
-				}
+				MapCombineJob mcJob = prog
+					.createMapCombineJob(nodeToBlocks.get(mapperId));
+				jobDispatcher.enqueue(mcJob);
 			}
 		}
 	}
 
-	public void combineFinished(int jobId, int combinedBlocks) {
-		if (combinedBlocks < 1) {
-			// TODO handle this case
-			return;
-		}
-		MapReduceJob job = activeJobs.get(jobId);
-		boolean combinePhaseFinished = job.combineFinished(combinedBlocks);
+	public void mapCombineFinished(MapCombineJob job) {
+		MapReduceProgram prog = activePrograms.get(job.getId());
+
+		boolean combinePhaseFinished = prog.mapCombineFinished(job);
 		if (combinePhaseFinished) {
-			System.out.println("Scheduler issuing reduces");
-
-			// distribute reducers amongst participants
-			Map<Integer, Set<Integer>> blockLocations = null;
-			try {
-				blockLocations = master.getBlockLocations(job.getFilename());
-			} catch (RemoteException e1) {
-				e1.printStackTrace();
-			}
-			for (int blockIndex : blockLocations.keySet()) {
-				int minWorker = findMinWorker(blockLocations.get(blockIndex));
-				if (minWorker == -1) {
-					System.out.println("Could not find worker for block " + blockIndex);
-					// TODO: Reset minWorker by transferring block...
-				}
-				System.out.println("Found worker " + minWorker);
-				job.addReducer(minWorker, blockIndex);
-				incrementActiveReduces(minWorker);
-			}
-
-			// get all mappers ids
-			System.out.println("Telling mappers about reducer distribution");
-			Set<Integer> mappers = new HashSet<Integer>();
-			for (int mapperId : job.getMappers()) {
-				mappers.add(mapperId);
-			}
-
-			// issue combine jobs to each mapper
-			System.out.println("Scheduled reducers");
-			int numPartitions = blockLocations.size();
-			Class<?> clazz = job.getUserDefinedClass();
+			System.out.println("Creating reduce jobs");
+			Set<Integer> mappers = prog.getMappers();
+			int numPartitions = prog.getNumPartitions();
 			for (int partitionNo = 0; partitionNo < numPartitions; partitionNo++) {
-				int nodeId = job.getReducer(partitionNo);
-				System.out.println("Issued node " + nodeId + " with reduce for partition "
-					+ partitionNo);
-				FacilityManager manager = master.getManager(nodeId);
-				try {
-					manager.runReduceJob(new ReduceJob(jobId, job.getFilename(), partitionNo,
-						mappers, clazz));
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
+				ReduceJob reduceJob = prog.createReduceJob(partitionNo, mappers);
+				jobDispatcher.enqueue(reduceJob);
 			}
-			System.out.println("running reduce jobs");
 		}
 	}
 
-	public void reduceFinished(int jobId) throws FileNotFoundException, RemoteException {
-		MapReduceJob job = activeJobs.get(jobId);
-		boolean reducePhaseFinished = job.reduceFinished();
+	public void reduceFinished(ReduceJob job) {
+		MapReduceProgram prog = activePrograms.get(job.getId());
+		boolean reducePhaseFinished = prog.reduceFinished(job);
 		if (reducePhaseFinished) {
-			System.out.println("Start combining reduces.");
-
-			// Find minimum worker.
-			Set<Integer> allNodeIds = new HashSet<Integer>(activeMaps.length);
-			for (int id = 0; id < activeMaps.length; id++) {
-				allNodeIds.add(id);
-			}
-
-			int minWorker = findMinWorker(allNodeIds);
-
-			if (minWorker == -1) {
-				System.out.println("Could not find worker to combine reduces.");
-				// TODO: Wait?
-			}
-
-			System.out.println("Found worker to combine reduces: " + minWorker);
-
+			System.out.println("Creating reduce combiner");
 			// Gather reduction files, combine them, and upload the results.
-			ReduceCombineJob rcJob = new ReduceCombineJob(job);
-			master.getManager(minWorker).runReduceCombineJob(rcJob);
+			ReduceCombineJob rcJob = prog.createReduceCombineJob();
+			jobDispatcher.enqueue(rcJob);
 		}
+	}
+	
+	public void reduceCombineFinished(ReduceCombineJob job) {
+		MapReduceProgram prog = activePrograms.get(job.getId());
+		prog.reduceCombineFinished(job);
+		System.out.println("The program has finished");
+		activePrograms.remove(prog);
+		completedPrograms.put(prog.getId(), prog);
+	}
+	
+	public void nodeDied(int nodeId) {
+		for (MapReduceProgram prog : activePrograms.values()) {
+			Set<NodeJob> jobs = prog.getAssignments(nodeId);
+			for (NodeJob job : jobs) {
+				job.setDone(false);
+				if (job instanceof MapCombineJob) {
+					// TODO STOPPED HERE
+				}
+				jobDispatcher.enqueue(job);
+			}
+		}
+	}
+
+	public void setDispatcher(JobDispatcher dispatcher) {
+		this.jobDispatcher = dispatcher;
+	}
+
+	public void setHealthChecker(HealthChecker healthChecker) {
+		this.healthChecker = healthChecker;
+	}
+	
+	public synchronized int getNumMappers(int nodeId) {
+		return getNumAssignments(nodeId, MapJob.class);
+	}
+
+	public synchronized int getNumReducers(int nodeId) {
+		return getNumAssignments(nodeId, ReduceJob.class);
+	}
+
+	
+	public int getNumAssignments(int nodeId, Class<?> clazz) {
+		int numMappers = 0;
+		for (MapReduceProgram prog : activePrograms.values()) {
+			numMappers = prog.getNumAssignments(nodeId, clazz);
+		}
+		return numMappers;
 	}
 }

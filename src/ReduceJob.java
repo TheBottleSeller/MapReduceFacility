@@ -11,11 +11,11 @@ public class ReduceJob extends NodeJob implements Serializable {
 	private int partitionNum;
 	private Set<Integer> mappers;
 	
-	public ReduceJob(int jobId, String filename, int partitionNum, Set<Integer> mappers, Class<?> clazz) {
-		super(jobId, filename);
+	public ReduceJob(MapReduceProgram prog, int nodeId, int partitionNum, Set<Integer> mappers) {
+		super(prog.getId(), nodeId,prog.getFilename());
 		this.partitionNum = partitionNum;
 		this.mappers = mappers;
-		this.clazz = clazz;
+		this.clazz = prog.getUserDefinedClass();
 	}
 
 	public Class<?> getClazz() {

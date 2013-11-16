@@ -44,7 +44,7 @@ public abstract class Mapper440 extends Thread {
 		}
 
 		try {
-			master.mapFinished(success, mapJob, nodeId);
+			master.jobFinished(success, mapJob);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}

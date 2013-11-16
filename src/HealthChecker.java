@@ -45,7 +45,7 @@ public class HealthChecker extends Thread {
 		}
 	}
 
-	public boolean isHealthy(int id) throws RemoteException {
+	public boolean isHealthy(int id) {
 		return healthy[id];
 	}
 }

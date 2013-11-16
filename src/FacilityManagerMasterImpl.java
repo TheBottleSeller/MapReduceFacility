@@ -22,6 +22,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	private int currentNode;
 
 	private HealthChecker healthChecker;
+	private JobDispatcher dispatcher;
 	private JobScheduler scheduler;
 
 	public FacilityManagerMasterImpl(Config config) throws IOException, AlreadyBoundException,
@@ -50,7 +51,13 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		}
 		healthChecker = new HealthChecker(this, expectedNumParticipants);
 		scheduler = new JobScheduler(this, config);
+		dispatcher = new JobDispatcher(this, config);
+		dispatcher.setScheduler(scheduler);
+		scheduler.setDispatcher(dispatcher);
+		scheduler.setHealthChecker(healthChecker);
+		
 		healthChecker.start();
+		dispatcher.start();
 
 		System.out.println("All slaves connected.");
 	}
@@ -169,7 +176,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		if (blockLocations == null) {
 			return -1;
 		}
-		return scheduler.issueJob(clazz, filename, blockLocations);
+		return scheduler.issueJob(clazz, filename, blockLocations.size());
 	}
 
 	@Override
@@ -180,28 +187,10 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	@Override
 	public void jobFinished(boolean success, NodeJob job) throws RemoteException {
 		if (!success) {
-
+			dispatcher.enqueue(job);
+		} else {
+			scheduler.jobFinished(job);
 		}
-	}
-
-	@Override
-	public void mapFinished(boolean success, MapJob mapJob, int nodeId) throws RemoteException {
-		System.out.println("Mapper finished for block " + mapJob.getBlockIndex());
-		scheduler.mapFinished(mapJob, nodeId);
-	}
-
-	@Override
-	public void combineFinished(boolean success, int jobId, int blocksCombined)
-		throws RemoteException {
-		System.out.println("Combiner finished for " + blocksCombined + " blocks");
-		scheduler.combineFinished(jobId, blocksCombined);
-	}
-
-	@Override
-	public void reduceFinished(boolean success, int jobId) throws FileNotFoundException,
-		RemoteException {
-		System.out.println("Reducer finished");
-		scheduler.reduceFinished(jobId);
 	}
 
 	@Override
