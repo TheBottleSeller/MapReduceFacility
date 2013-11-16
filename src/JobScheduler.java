@@ -25,6 +25,7 @@ public class JobScheduler {
 
 	public JobScheduler(FacilityManagerMasterImpl master, Config config) {
 		this.master = master;
+		this.config = config;
 		this.maxMaps = config.getMaxMapsPerHost();
 		this.maxReduces = config.getMaxReducesPerHost();
 		activePrograms = Collections.synchronizedMap(new HashMap<Integer, MapReduceProgram>());
@@ -43,6 +44,7 @@ public class JobScheduler {
 
 	public int findWorker(NodeJob job) {
 		int nodeId = -1;
+		System.out.println("Finding worker for job " + job);
 		if (job instanceof MapJob) {
 			nodeId = findMapper((MapJob) job);
 		} else if (job instanceof MapCombineJob) {
@@ -172,8 +174,8 @@ public class JobScheduler {
 			config.getParticipantIps().length);
 		activePrograms.put(jobId, prog);
 
-		for (int blockIndex = 0; blockIndex < numBlocks; blockIndex++) {
-			MapJob mapJob = prog.createMapJob(blockIndex);
+		Set<MapJob> mapJobs = prog.createMapJobs();
+		for (MapJob mapJob : mapJobs) {
 			jobDispatcher.enqueue(mapJob);
 		}
 		return jobId;
@@ -198,14 +200,15 @@ public class JobScheduler {
 		MapReduceProgram prog = activePrograms.get(jobId);
 		boolean mapPhaseFinished = prog.mapFinished(mapJob);
 		if (mapPhaseFinished) {
+			System.out.println("MAP PHASE FINISHED");
 			// Start combine phase on all of the mappers
 			
 			// make map of nodeId -> list of blocks mapped on node
 			Map<Integer, Set<Integer>> nodeToBlocks = prog.getNodeToBlocks();
-
+			System.out.println(prog.getMaxKey() + " " + prog.getMinKey());
 			for (Integer mapperId : nodeToBlocks.keySet()) {
 				MapCombineJob mcJob = prog
-					.createMapCombineJob(nodeToBlocks.get(mapperId));
+					.createMapCombineJob(mapperId, nodeToBlocks.get(mapperId));
 				jobDispatcher.enqueue(mcJob);
 			}
 		}
@@ -215,6 +218,7 @@ public class JobScheduler {
 		MapReduceProgram prog = activePrograms.get(job.getId());
 
 		boolean combinePhaseFinished = prog.mapCombineFinished(job);
+		System.out.println("MapCombineJob finished successfully " + job);
 		if (combinePhaseFinished) {
 			System.out.println("Creating reduce jobs");
 			Set<Integer> mappers = prog.getMappers();

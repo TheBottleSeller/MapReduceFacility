@@ -21,7 +21,6 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		+ "mapreduce <class-filename> <input-file-namespace> \t run the specified mapreduce."
 		+ "ps \t list all active/completed mapreduces.";
 
-	protected static String clusterName;
 	protected static String REGISTRY_MASTER_KEY = "_MASTER";
 	protected static String REGISTRY_SLAVE_KEY = "_SLAVE";
 
@@ -47,7 +46,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	// Constructor used by a slave.
-	public FacilityManagerImpl(String masterIp, int id, int port) throws UnknownHostException,
+	public FacilityManagerImpl(String masterIp, int id, int port, String clusterName) throws UnknownHostException,
 		IOException, NotBoundException, AlreadyBoundException {
 		this.id = id;
 		registry = LocateRegistry.createRegistry(port);

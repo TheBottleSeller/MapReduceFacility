@@ -4,12 +4,14 @@ public class NodeJob implements Serializable {
 
 	private static final long serialVersionUID = 14324L;
 	
+	private int progId;
 	private int jobId;
 	private int nodeId;
 	private String filename;
 	private volatile boolean done;
 	
-	public NodeJob(int jobId, int nodeId, String filename) {
+	public NodeJob(int progId, int jobId, int nodeId, String filename) {
+		this.progId = progId;
 		this.jobId = jobId;
 		this.nodeId = nodeId;
 		this.filename = filename;
@@ -17,6 +19,10 @@ public class NodeJob implements Serializable {
 	}
 
 	public int getId() {
+		return progId;
+	}
+	
+	public int getJobId() {
 		return jobId;
 	}
 	
@@ -38,5 +44,10 @@ public class NodeJob implements Serializable {
 	
 	public boolean isDone() {
 		return done;
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("progId=%d jobId=%d nodeId=%d", progId, jobId, nodeId);
 	}
 }

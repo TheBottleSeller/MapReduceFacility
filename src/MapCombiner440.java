@@ -100,8 +100,12 @@ public class MapCombiner440 extends Thread {
 	}
 
 	private int partition(int key) {
-		int range = (int) (Math.ceil((mcJob.getMaxKey() - mcJob.getMinKey())
-			/ (mcJob.getNumPartitions() * 1.0)));
+		int range = (int) Math.ceil((mcJob.getMaxKey() - mcJob.getMinKey()) * 1.0
+			/ mcJob.getNumPartitions());
+		System.out.println((mcJob.getMaxKey() - mcJob.getMinKey()) * 1.0
+			/ mcJob.getNumPartitions());
+		System.out.println(Math.ceil((mcJob.getMaxKey() - mcJob.getMinKey()) * 1.0
+			/ mcJob.getNumPartitions()));
 		int partitionNo = (key - mcJob.getMinKey()) / range;
 		return partitionNo;
 	}

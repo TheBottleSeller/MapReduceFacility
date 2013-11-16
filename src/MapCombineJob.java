@@ -1,21 +1,21 @@
-
+import java.util.Arrays;
 import java.util.Set;
 
 public class MapCombineJob extends NodeJob {
 
 	private static final long serialVersionUID = 52151L;
-	
+
 	private Set<Integer> blockIndices;
 	private int maxKey;
 	private int minKey;
 	private int numPartitions;
 
-	public MapCombineJob(MapReduceProgram job, int nodeId, Set<Integer> blockIndices) {
-		super(job.getId(), nodeId, job.getFilename());
+	public MapCombineJob(MapReduceProgram prog, int nodeId, Set<Integer> blockIndices) {
+		super(prog.getId(), prog.createNewJobId(), nodeId, prog.getFilename());
 		this.blockIndices = blockIndices;
-		maxKey = job.getMaxKey();
-		minKey = job.getMinKey();
-		numPartitions = job.getNumBlocks();
+		maxKey = prog.getMaxKey();
+		minKey = prog.getMinKey();
+		numPartitions = prog.getNumBlocks();
 	}
 
 	public Set<Integer> getBlockIndices() {
@@ -48,5 +48,11 @@ public class MapCombineJob extends NodeJob {
 
 	public void setNumPartitions(int numPartitions) {
 		this.numPartitions = numPartitions;
+	}
+
+	@Override
+	public String toString() {
+		return String.format("MapCombineJob %s blockIndices=%s numPartitions=%d maxKey=%d minKey=%d", super.toString(),
+			Arrays.toString(blockIndices.toArray()), numPartitions, maxKey, minKey);
 	}
 }

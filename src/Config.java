@@ -37,6 +37,7 @@ public class Config implements Serializable {
 				if (!(line.startsWith("#") || line.isEmpty())) {
 					if (line.startsWith("CLUSTER_NAME")) {
 						clusterName = line.substring(line.indexOf('=') + 1);
+						System.out.println("clustername = " + clusterName);
 					} else if (line.startsWith("MASTER_IP")) {
 						masterIp = line.substring(line.indexOf('=') + 1);
 						InetAddress addr = InetAddress.getByName(masterIp);
@@ -52,7 +53,7 @@ public class Config implements Serializable {
 								break;
 							}
 						}
-						if (containsMasterIp) {
+						if (!containsMasterIp) {
 							throw new Exception("PARTICIPANT_IPS must contain MASTER_IP.");
 						}
 					} else if (line.startsWith("FS_READ_PORT")) {

@@ -16,14 +16,23 @@ public class Main {
 			facilityManager = new FacilityManagerMasterImpl(config);
 			master = facilityManager;
 			facilityManager.run();
-		} else if (args.length == 4) {
+		} else if (args.length == 5) {
 			// FacilityManager should behave as a participant.
 			String masterIp = args[1];
 			int id = Integer.parseInt(args[2]);
 			int port = Integer.parseInt(args[3]);
-			facilityManager = new FacilityManagerImpl(masterIp, id, port);
-			while (true) {
-				Thread.sleep(1000);
+			String clusterName = args[4];
+			boolean successfullyLaunched = false;
+			try {
+				facilityManager = new FacilityManagerImpl(masterIp, id, port, clusterName);
+				successfullyLaunched = true;
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+			if (successfullyLaunched) {
+				while (true) {
+					Thread.sleep(1000);
+				}
 			}
 		} else {
 			System.out

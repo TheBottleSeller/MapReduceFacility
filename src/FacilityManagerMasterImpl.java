@@ -37,6 +37,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		managers[getNodeId()] = this;
 
 		clusterName = config.getClusterName();
+		System.out.println("master cluster name = " + clusterName);
 		rmiPort = config.getMrPort();
 
 		/* FILESYSTEM INIT */
@@ -50,6 +51,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		while (managers.length != expectedNumParticipants) {
 			Thread.sleep(1000);
 		}
+		
 		healthChecker = new HealthChecker(this, expectedNumParticipants);
 		scheduler = new JobScheduler(this, config);
 		dispatcher = new JobDispatcher(this, config);
@@ -76,7 +78,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 			System.out.println("Executing script to start " + slaveIp);
 			String command = "./" + startParticipantScript;
 			ProcessBuilder pb = new ProcessBuilder(command, slaveIp, localAddress, "" + i, ""
-				+ rmiPort);
+				+ rmiPort, clusterName);
 			pb.redirectErrorStream(true);
 			pb.directory(null);
 			Process p = pb.start();
@@ -116,9 +118,8 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		String slaveIp = getConfig().getParticipantIps()[id];
 		System.out.println("Slave Connected: " + slaveIp);
 		Registry registry = LocateRegistry.getRegistry(slaveIp, rmiPort);
-		FacilityManager slaveManager = (FacilityManager) registry.lookup(REGISTRY_SLAVE_KEY);
+		FacilityManager slaveManager = (FacilityManager) registry.lookup(clusterName + REGISTRY_SLAVE_KEY);
 		managers[id] = slaveManager;
-		System.out.println(slaveManager.heartBeat());
 		return getConfig();
 	}
 
@@ -188,8 +189,10 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	@Override
 	public void jobFinished(boolean success, NodeJob job) throws RemoteException {
 		if (!success) {
+			System.out.println("Job finished unsuccessfully " + job);
 			dispatcher.enqueue(job);
 		} else {
+			System.out.println("Job finished successfully " + job);
 			scheduler.jobFinished(job);
 		}
 	}

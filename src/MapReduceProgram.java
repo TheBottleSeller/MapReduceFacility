@@ -3,6 +3,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class MapReduceProgram {
 
@@ -11,13 +12,15 @@ public class MapReduceProgram {
 	private Class<?> clazz;
 	private int numBlocks;
 	private int numParticipants;
-	private int maxKey;
-	private int minKey;
-	private Map<Integer, Set<NodeJob>> jobAssignments;
-	private Set<MapJob> mapJobs;
-	private Set<MapCombineJob> mapCombineJobs;
-	private Set<ReduceJob> reduceJobs;
-	private ReduceCombineJob reduceCombineJob;
+	private AtomicInteger totalJobs;
+	private volatile int maxKey;
+	private volatile int minKey;
+	private Map<Integer, NodeJob> allJobs;
+	private volatile Map<Integer, Set<NodeJob>> jobAssignments;
+	private volatile Set<MapJob> mapJobs;
+	private volatile Set<MapCombineJob> mapCombineJobs;
+	private volatile Set<ReduceJob> reduceJobs;
+	private volatile ReduceCombineJob reduceCombineJob;
 
 	public MapReduceProgram(int id, Class<?> clazz, String filename, int numBlocks,
 		int numParticipants) {
@@ -36,6 +39,11 @@ public class MapReduceProgram {
 		for (int i = -1; i < numParticipants; i++) {
 			jobAssignments.put(i, Collections.synchronizedSet(new HashSet<NodeJob>()));
 		}
+		totalJobs = new AtomicInteger(0);
+	}
+	
+	public int createNewJobId() {
+		return totalJobs.getAndIncrement();
 	}
 
 	public void assignJob(NodeJob job, int nodeId) {
@@ -71,16 +79,20 @@ public class MapReduceProgram {
 		return partitionReducers;
 	}
 
-	public MapJob createMapJob(int blockIndex) {
-		MapJob job = new MapJob(id, -1, filename, blockIndex, clazz);
-		jobAssignments.get(-1).add(job);
-		return job;
+	public Set<MapJob> createMapJobs() {
+		mapJobs = new HashSet<MapJob>();
+		for (int blockIndex = 0; blockIndex < numBlocks; blockIndex++) {
+			MapJob job = new MapJob(id, createNewJobId(), -1, filename, blockIndex, clazz);
+			jobAssignments.get(-1).add(job);
+			mapJobs.add(job);
+		}
+		return mapJobs;
 	}
 
-	public MapCombineJob createMapCombineJob(Set<Integer> blockIndices) {
-		MapCombineJob mcJob = new MapCombineJob(this, -1, blockIndices);
+	public MapCombineJob createMapCombineJob(int mapperId, Set<Integer> blockIndices) {
+		MapCombineJob mcJob = new MapCombineJob(this, mapperId, blockIndices);
 		mapCombineJobs.add(mcJob);
-		jobAssignments.get(-1).add(mcJob);
+		jobAssignments.get(mapperId).add(mcJob);
 		return mcJob;
 	}
 
@@ -92,7 +104,7 @@ public class MapReduceProgram {
 	}
 
 	public ReduceCombineJob createReduceCombineJob() {
-		reduceCombineJob = new ReduceCombineJob(id, -1, filename, getNumPartitions(),
+		reduceCombineJob = new ReduceCombineJob(id, createNewJobId(), -1, filename, getNumPartitions(),
 			getPartitionReducers());
 		return reduceCombineJob;
 	}
@@ -101,8 +113,10 @@ public class MapReduceProgram {
 		maxKey = Math.max(maxKey, mapJob.getMaxKey());
 		minKey = Math.min(minKey, mapJob.getMinKey());
 		mapJob.setDone(true);
+		System.out.println("Setting job to done " + mapJob);
 		for (MapJob job : mapJobs) {
 			if (!job.isDone()) {
+				System.out.println("Map job not done " + job);
 				return false;
 			}
 		}

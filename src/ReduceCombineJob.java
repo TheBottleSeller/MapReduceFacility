@@ -7,8 +7,8 @@ public class ReduceCombineJob extends NodeJob {
 	private int numPartitions;
 	private int[] partitionReducers;
 	
-	public ReduceCombineJob(int jobId, int nodeId, String filename, int numPartitions, int[] partitionReducers) {
-		super(jobId, nodeId, filename);
+	public ReduceCombineJob(int progId, int jobId, int nodeId, String filename, int numPartitions, int[] partitionReducers) {
+		super(progId, jobId, nodeId, filename);
 		this.numPartitions = numPartitions;
 		this.partitionReducers = partitionReducers;
 	}
@@ -19,6 +19,11 @@ public class ReduceCombineJob extends NodeJob {
 	
 	public int getReducer(int partitionNum) {
 		return partitionReducers[partitionNum];
+	}
+	
+	@Override
+	public String toString() {
+		return String.format("ReduceCombineJob %s", super.toString());
 	}
 	
 }
