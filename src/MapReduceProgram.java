@@ -46,6 +46,7 @@ public class MapReduceProgram {
 	public void assignJob(NodeJob job, int nodeId) {
 		jobAssignments.get(job.getNodeId()).remove(job);
 		jobAssignments.get(nodeId).add(job);
+		job.setNodeId(nodeId);
 	}
 	
 	public Set<Integer> getMappers() {

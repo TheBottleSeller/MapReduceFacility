@@ -57,7 +57,6 @@ public class JobScheduler {
 		}
 		MapReduceProgram prog = activePrograms.get(job.getId());
 		prog.assignJob(job, nodeId);
-		job.setNodeId(nodeId);
 		return nodeId;
 	}
 
