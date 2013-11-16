@@ -195,7 +195,6 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			mapper.setMaster(master);
 			mapper.setFS(fs);
 			mapper.setMapJob(mapJob);
-			mapper.setNodeId(getNodeId());
 
 			mapper.start();
 		} catch (InstantiationException e) {
