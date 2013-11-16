@@ -10,7 +10,6 @@ public abstract class Mapper440 extends Thread {
 	private FacilityManagerMaster master;
 	private FS fs;
 	private MapJob mapJob;
-	private int nodeId;
 
 	public abstract List<KVPair<String, String>> map(String record);
 
@@ -62,7 +61,4 @@ public abstract class Mapper440 extends Thread {
 		this.mapJob = mapJob;
 	}
 
-	public void setNodeId(int nodeId) {
-		this.nodeId = nodeId;
-	}
 }

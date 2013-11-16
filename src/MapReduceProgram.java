@@ -11,9 +11,6 @@ public class MapReduceProgram {
 	private Class<?> clazz;
 	private int numBlocks;
 	private int numParticipants;
-	private int completedMaps;
-	private int completedCombines;
-	private int completedReduces;
 	private int maxKey;
 	private int minKey;
 	private Map<Integer, Set<NodeJob>> jobAssignments;
@@ -22,32 +19,30 @@ public class MapReduceProgram {
 	private Set<ReduceJob> reduceJobs;
 	private ReduceCombineJob reduceCombineJob;
 
-	public MapReduceProgram(int id, Class<?> clazz, String filename, int numBlocks, int numParticipants) {
+	public MapReduceProgram(int id, Class<?> clazz, String filename, int numBlocks,
+		int numParticipants) {
 		this.id = id;
 		this.filename = filename;
 		this.clazz = clazz;
 		this.numBlocks = numBlocks;
 		this.numParticipants = numParticipants;
-		completedMaps = 0;
-		completedCombines = 0;
-		completedReduces = 0;
 		maxKey = Integer.MIN_VALUE;
 		minKey = Integer.MAX_VALUE;
 		mapJobs = Collections.synchronizedSet(new HashSet<MapJob>());
 		mapCombineJobs = Collections.synchronizedSet(new HashSet<MapCombineJob>());
-		reduceJobs =  Collections.synchronizedSet(new HashSet<ReduceJob>());
-		
+		reduceJobs = Collections.synchronizedSet(new HashSet<ReduceJob>());
+
 		jobAssignments = Collections.synchronizedMap(new HashMap<Integer, Set<NodeJob>>());
 		for (int i = -1; i < numParticipants; i++) {
 			jobAssignments.put(i, Collections.synchronizedSet(new HashSet<NodeJob>()));
 		}
 	}
-	
+
 	public void assignJob(NodeJob job, int nodeId) {
 		jobAssignments.get(job.getNodeId()).remove(job);
 		jobAssignments.get(nodeId).add(job);
 	}
-	
+
 	public Set<Integer> getMappers() {
 		Set<Integer> mappers = new HashSet<Integer>();
 		for (int i = 0; i < numParticipants; i++) {
@@ -61,7 +56,7 @@ public class MapReduceProgram {
 		}
 		return mappers;
 	}
-	
+
 	public int[] getPartitionReducers() {
 		int[] partitionReducers = new int[getNumPartitions()];
 		for (int i = 0; i < numParticipants; i++) {
@@ -94,9 +89,11 @@ public class MapReduceProgram {
 		jobAssignments.get(-1).add(job);
 		return job;
 	}
-	
+
 	public ReduceCombineJob createReduceCombineJob() {
-		return new ReduceCombineJob(id, -1, filename, getNumPartitions(), getPartitionReducers());
+		reduceCombineJob = new ReduceCombineJob(id, -1, filename, getNumPartitions(),
+			getPartitionReducers());
+		return reduceCombineJob;
 	}
 
 	public synchronized boolean mapFinished(MapJob mapJob) {
@@ -120,7 +117,7 @@ public class MapReduceProgram {
 		}
 		return true;
 	}
-	
+
 	public boolean reduceFinished(ReduceJob job) {
 		job.setDone(true);
 		for (ReduceJob reduce : reduceJobs) {
@@ -130,15 +127,15 @@ public class MapReduceProgram {
 		}
 		return true;
 	}
-	
+
 	public void reduceCombineFinished(ReduceCombineJob job) {
 		job.setDone(true);
 	}
-	
+
 	public Set<NodeJob> getAssignments(int nodeId) {
 		return jobAssignments.get(nodeId);
 	}
-	
+
 	public int getNumAssignments(int nodeId, Class<?> jobClazz) {
 		int numAssignments = 0;
 		Set<NodeJob> assignments = jobAssignments.get(nodeId);
@@ -158,7 +155,7 @@ public class MapReduceProgram {
 		}
 		return null;
 	}
-	
+
 	public int getWorker(NodeJob job) {
 		for (int nodeId : jobAssignments.keySet()) {
 			if (jobAssignments.get(nodeId).contains(job)) {
@@ -167,7 +164,7 @@ public class MapReduceProgram {
 		}
 		return -1;
 	}
-	
+
 	public Map<Integer, Set<Integer>> getNodeToBlocks() {
 		Map<Integer, Set<Integer>> blockLocations = new HashMap<Integer, Set<Integer>>();
 		for (int i = 0; i < numParticipants; i++) {
