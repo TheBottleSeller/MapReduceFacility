@@ -11,12 +11,12 @@ public class RecordWriter {
 		this.writer = new PrintWriter(new FileOutputStream(outFile));
 	}
 
-	public void writeKeyValues(String key, String value) {
+	public void writeKeyValue(String key, String value) {
 		writer.println(key);
 		writer.println(value);
 	}
 
-	public void writeKeyMultiValues(String key, List<String> values) {
+	public void writeKeyMultiValue(String key, List<String> values) {
 		writer.println(key);
 		writer.println(values.size());
 		for (String value : values) {

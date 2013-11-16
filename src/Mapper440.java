@@ -33,7 +33,7 @@ public abstract class Mapper440 extends Thread {
 				for (KVPair<String, String> kvPair : mappedRecord) {
 					int keyHash = kvPair.getKey().hashCode();
 					mapJob.updateMaxMinKey(keyHash);
-					writer.writeKeyValues(kvPair.getKey(), kvPair.getValue());
+					writer.writeKeyValue(kvPair.getKey(), kvPair.getValue());
 				}
 			}
 			reader.close();

@@ -16,6 +16,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	private static String startParticipantScript = "start_participant.sh";
 
+	private String clusterName;
 	private int rmiPort;
 	private FacilityManager[] managers;
 	private Map<String, Map<Integer, Set<Integer>>> fsTable;
@@ -36,13 +37,14 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		managers = new FacilityManager[expectedNumParticipants];
 		managers[getNodeId()] = this;
 
+		clusterName = config.getClusterName();
 		rmiPort = config.getMrPort();
 
 		/* FILESYSTEM INIT */
 		fsTable = Collections.synchronizedMap(new HashMap<String, Map<Integer, Set<Integer>>>());
 
 		Registry r = LocateRegistry.createRegistry(rmiPort);
-		r.bind(REGISTRY_MASTER_KEY, UnicastRemoteObject.exportObject(this, 0));
+		r.bind(clusterName + REGISTRY_MASTER_KEY, UnicastRemoteObject.exportObject(this, 0));
 		connectParticipants();
 
 		System.out.println("Waiting for slaves to connect...");

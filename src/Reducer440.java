@@ -149,7 +149,7 @@ public abstract class Reducer440 extends Thread {
 				currentMin.addValues(pair.getValue());
 			} else {
 				// print the currentMin key to merged file
-				mergedWriter.writeKeyMultiValues(currentMin.getKey(), currentMin.getValue());
+				mergedWriter.writeKeyMultiValue(currentMin.getKey(), currentMin.getValue());
 
 				// set the currentMin to the previously read kvpair
 				currentMin = pair;
@@ -166,7 +166,7 @@ public abstract class Reducer440 extends Thread {
 		}
 
 		// print the currentMin key to merged file
-		mergedWriter.writeKeyMultiValues(currentMin.getKey(), currentMin.getValue());
+		mergedWriter.writeKeyMultiValue(currentMin.getKey(), currentMin.getValue());
 		mergedWriter.close();
 
 		return mergedFile;
@@ -180,7 +180,7 @@ public abstract class Reducer440 extends Thread {
 		KVPairs<String, String> kvPairs;
 		while ((kvPairs = reader.readKeyMultiValues()) != null) {
 			KVPair<String, String> reduction = reduce(kvPairs);
-			writer.writeKeyValues(reduction.getKey(), reduction.getValue());
+			writer.writeKeyValue(reduction.getKey(), reduction.getValue());
 		}
 		writer.close();
 		reader.close();
