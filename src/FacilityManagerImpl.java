@@ -16,10 +16,11 @@ import java.util.Scanner;
 public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 	private static final String PROMPT = "=> ";
-	private static final String VALID_COMMANDS = "Valid commands:\n"
-		+ "upload <filename> <namespace> \t upload a file to the DFS.\n"
-		+ "mapreduce <class-filename> <input-file-namespace> \t run the specified mapreduce."
-		+ "ps \t list all active/completed mapreduces.";
+	private static final String VALID_COMMANDS = "VALID COMMANDS:\n"
+		+ "upload <filepath> <filename> \t Upload a file to the distributed file system.\n"
+		+ "mapreduce <class-filepath> <input-filename> \t Run the specified mapreduce.\n"
+		+ "ps \t List all active mapreduces.\n"
+		+ "ps -a \t List all active/completed mapreduces.\n";
 
 	protected static String clusterName;
 	protected static String REGISTRY_MASTER_KEY = "_MASTER";
@@ -72,6 +73,19 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			} else if (command.equals("exit")) {
 				// Exit the system.
 				exit();
+			} else if (command.equals("ps")) {
+				try {
+					System.out.println(master.getActiveJobsList());
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
+			} else if (command.equals("ps -a")) {
+				try {
+					System.out.println(master.getActiveJobsList());
+					System.out.println(master.getCompletedJobsList());
+				} catch (RemoteException e) {
+					e.printStackTrace();
+				}
 			} else {
 				System.out.println(VALID_COMMANDS);
 			}

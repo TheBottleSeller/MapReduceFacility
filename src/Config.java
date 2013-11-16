@@ -85,12 +85,12 @@ public class Config implements Serializable {
 			e.printStackTrace();
 		}
 
-		if (isMissingArgument()) {
-			throw new Exception("Config file has invalid or missing argument(s).");
+		if (hasBadArguments()) {
+			throw new Exception("The given config file has invalid or missing argument(s).");
 		}
 	}
 
-	public boolean isMissingArgument() {
+	public boolean hasBadArguments() {
 		return (clusterName == null || masterIp == null || participantIps == null || fsReadPort < 1
 			|| fsWritePort < 1 || mrPort < 1 || maxMapsPerHost < 1 || maxReducesPerHost < 1
 			|| replicationFactor < 1 || blockSize < 1);

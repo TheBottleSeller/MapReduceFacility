@@ -1,7 +1,9 @@
 import java.rmi.RemoteException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -41,6 +43,52 @@ public class JobScheduler {
 		totalJobs = new AtomicInteger(0);
 	}
 
+	public String getActiveProgramsList() {
+		String list = "";
+
+		for (MapReduceProgram prog : activePrograms.values()) {
+			String workerList[];
+
+			Integer[] mappers = (Integer[]) prog.getMappers().toArray();
+			if (mappers.length > 0) {
+				workerList = new String[mappers.length];
+				for (int i = 0; i < mappers.length; i++) {
+					workerList[i] = (config.getParticipantIps()[i]);
+				}
+			} else {
+				workerList = config.getParticipantIps();
+			}
+
+			list = list.concat(prog.getFilename() + " " + prog.getClass().getName()
+				+ "\t Active \t");
+
+			if (mappers.length > 0) {
+				for (int i = 0; i < workerList.length; i++) {
+					list = list.concat(workerList[i] + "\n");
+				}
+			} else {
+				for (int i = 0; i < workerList.length; i++) {
+					if (workerList[i] != null) {
+						list = list.concat("\t" + workerList[i] + "\n");
+					}
+				}
+			}
+		}
+
+		return list;
+	}
+
+	public String getCompletedProgramsList() {
+		String list = "";
+
+		for (MapReduceProgram prog : completedPrograms.values()) {
+			list = list.concat(prog.getFilename() + " " + prog.getClass().getName()
+				+ "\t Completed \n");
+		}
+
+		return list;
+	}
+
 	public int findWorker(NodeJob job) {
 		int nodeId = -1;
 		if (job instanceof MapJob) {
@@ -52,7 +100,7 @@ public class JobScheduler {
 		} else if (job instanceof ReduceCombineJob) {
 			nodeId = findReduceCombiner((ReduceCombineJob) job);
 		} else {
-			System.out.println("Error");
+			System.out.println("Error.");
 		}
 		MapReduceProgram prog = activePrograms.get(job.getId());
 		prog.assignJob(job, nodeId);
@@ -167,7 +215,7 @@ public class JobScheduler {
 	public int issueJob(Class<?> clazz, String inputFile, int numBlocks) {
 		System.out.println("Scheduler issuing job");
 		int jobId = totalJobs.getAndIncrement();
-		
+
 		MapReduceProgram prog = new MapReduceProgram(jobId, clazz, inputFile, numBlocks,
 			config.getParticipantIps().length);
 		activePrograms.put(jobId, prog);
@@ -199,13 +247,12 @@ public class JobScheduler {
 		boolean mapPhaseFinished = prog.mapFinished(mapJob);
 		if (mapPhaseFinished) {
 			// Start combine phase on all of the mappers
-			
+
 			// make map of nodeId -> list of blocks mapped on node
 			Map<Integer, Set<Integer>> nodeToBlocks = prog.getNodeToBlocks();
 
 			for (Integer mapperId : nodeToBlocks.keySet()) {
-				MapCombineJob mcJob = prog
-					.createMapCombineJob(nodeToBlocks.get(mapperId));
+				MapCombineJob mcJob = prog.createMapCombineJob(nodeToBlocks.get(mapperId));
 				jobDispatcher.enqueue(mcJob);
 			}
 		}
@@ -236,7 +283,7 @@ public class JobScheduler {
 			jobDispatcher.enqueue(rcJob);
 		}
 	}
-	
+
 	public void reduceCombineFinished(ReduceCombineJob job) {
 		MapReduceProgram prog = activePrograms.get(job.getId());
 		prog.reduceCombineFinished(job);
@@ -244,7 +291,7 @@ public class JobScheduler {
 		activePrograms.remove(prog);
 		completedPrograms.put(prog.getId(), prog);
 	}
-	
+
 	public void nodeDied(int nodeId) {
 		for (MapReduceProgram prog : activePrograms.values()) {
 			Set<NodeJob> jobs = prog.getAssignments(nodeId);
@@ -265,7 +312,7 @@ public class JobScheduler {
 	public void setHealthChecker(HealthChecker healthChecker) {
 		this.healthChecker = healthChecker;
 	}
-	
+
 	public synchronized int getNumMappers(int nodeId) {
 		return getNumAssignments(nodeId, MapJob.class);
 	}
@@ -274,7 +321,6 @@ public class JobScheduler {
 		return getNumAssignments(nodeId, ReduceJob.class);
 	}
 
-	
 	public int getNumAssignments(int nodeId, Class<?> clazz) {
 		int numMappers = 0;
 		for (MapReduceProgram prog : activePrograms.values()) {

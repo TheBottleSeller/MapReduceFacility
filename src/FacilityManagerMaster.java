@@ -20,4 +20,8 @@ public interface FacilityManagerMaster extends FacilityManager, Remote {
 	public Map<Integer, Set<Integer>> getBlockLocations(String filename) throws RemoteException;
 	
 	public void jobFinished(boolean success, NodeJob job) throws RemoteException;
+
+	public String getActiveJobsList() throws RemoteException;
+	
+	public String getCompletedJobsList() throws RemoteException;
 }
