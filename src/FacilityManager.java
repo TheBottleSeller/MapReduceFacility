@@ -23,6 +23,4 @@ public interface FacilityManager extends Remote {
 	public void runReduceJob(ReduceJob reduceJob) throws RemoteException;
 
 	public void runReduceCombineJob(ReduceCombineJob rcJob) throws RemoteException;
-
-	public boolean outputFinished(File output) throws RemoteException;
 }

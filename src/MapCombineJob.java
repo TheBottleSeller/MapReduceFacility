@@ -15,7 +15,7 @@ public class MapCombineJob extends NodeJob {
 		this.blockIndices = blockIndices;
 		maxKey = prog.getMaxKey();
 		minKey = prog.getMinKey();
-		numPartitions = prog.getNumBlocks();
+		numPartitions = prog.getNumPartitions();
 	}
 
 	public Set<Integer> getBlockIndices() {
