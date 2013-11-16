@@ -21,8 +21,9 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		+ "mapreduce <class-filename> <input-file-namespace> \t run the specified mapreduce."
 		+ "ps \t list all active/completed mapreduces.";
 
-	protected static String REGISTRY_MASTER_KEY = "MASTER";
-	protected static String REGISTRY_SLAVE_KEY = "SLAVE_HEALTH";
+	protected static String clusterName;
+	protected static String REGISTRY_MASTER_KEY = "_MASTER";
+	protected static String REGISTRY_SLAVE_KEY = "_SLAVE";
 
 	private int id;
 	protected FS fs;
@@ -50,9 +51,9 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		IOException, NotBoundException, AlreadyBoundException {
 		this.id = id;
 		registry = LocateRegistry.createRegistry(port);
-		registry.bind(REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
+		registry.bind(clusterName + REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
 		masterRegistry = LocateRegistry.getRegistry(masterIp, port);
-		master = (FacilityManagerMaster) masterRegistry.lookup(REGISTRY_MASTER_KEY);
+		master = (FacilityManagerMaster) masterRegistry.lookup(clusterName + REGISTRY_MASTER_KEY);
 		config = master.connect(id);
 		fs = new FS(this, master);
 	}

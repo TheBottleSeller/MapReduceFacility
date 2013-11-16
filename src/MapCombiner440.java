@@ -48,7 +48,7 @@ public class MapCombiner440 extends Thread {
 				while ((kvPair = blockReader.readKeyValue()) != null) {
 					int partitionNo = partition(kvPair.getKey().hashCode());
 					partitionWriter = partitionWriters.get(partitionNo);
-					partitionWriter.writeKeyValues(kvPair.getKey(), kvPair.getValue());
+					partitionWriter.writeKeyValue(kvPair.getKey(), kvPair.getValue());
 				}
 				blockReader.close();
 			}
@@ -81,7 +81,7 @@ public class MapCombiner440 extends Thread {
 					mcJob.getId(), partitionNo));
 				for (String aggregateKey : data.keySet()) {
 					List<String> values = data.get(aggregateKey);
-					partitionWriter.writeKeyMultiValues(aggregateKey, values);
+					partitionWriter.writeKeyMultiValue(aggregateKey, values);
 				}
 				partitionWriter.close();
 			}
