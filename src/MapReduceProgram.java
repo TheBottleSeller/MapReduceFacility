@@ -119,10 +119,8 @@ public class MapReduceProgram {
 		minKey = Math.min(minKey, mapJob.getMinKey());
 		allJobs.get(mapJob.getJobId()).setDone(true);
 		
-		System.out.println("Setting job to done " + mapJob);
 		for (MapJob job : mapJobs) {
 			if (!job.isDone()) {
-				System.out.println("Map job not done " + job);
 				return false;
 			}
 		}

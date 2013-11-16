@@ -37,7 +37,6 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		managers[getNodeId()] = this;
 
 		clusterName = config.getClusterName();
-		System.out.println("master cluster name = " + clusterName);
 		rmiPort = config.getMrPort();
 
 		/* FILESYSTEM INIT */
@@ -75,7 +74,6 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 				continue;
 			}
 			// Execute script.
-			System.out.println("Executing script to start " + slaveIp);
 			String command = "./" + startParticipantScript;
 			ProcessBuilder pb = new ProcessBuilder(command, slaveIp, localAddress, "" + i, ""
 				+ rmiPort, clusterName);
@@ -166,6 +164,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	public void slaveDied(int id) {
 		managers[id] = null;
+		scheduler.nodeDied(id);
 	}
 
 	public String getParticipantIp(int id) {

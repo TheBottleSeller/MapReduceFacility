@@ -10,7 +10,7 @@ import java.util.Set;
 
 public class ReduceCombiner440 extends Thread {
 
-	private FacilityManager manager;
+	private FacilityManagerMaster master;
 	private FS fs;
 	private ReduceCombineJob rcJob;
 
@@ -22,6 +22,7 @@ public class ReduceCombiner440 extends Thread {
 	public void run() {
 		// Combine reduceFiles.
 		File output = null;
+		boolean success = false;
 		try {
 			output = fs.makeFinalOutputFile(rcJob.getFilename(), rcJob.getId());
 			PrintWriter writer = new PrintWriter(new FileOutputStream(output));
@@ -33,13 +34,14 @@ public class ReduceCombiner440 extends Thread {
 				}
 				reader.close();
 			}
+			success = true;
 			writer.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
 
 		try {
-			manager.outputFinished(output);
+			master.jobFinished(success, rcJob);
 		} catch (RemoteException e) {
 			e.printStackTrace();
 		}
@@ -59,7 +61,6 @@ public class ReduceCombiner440 extends Thread {
 					File reduceFile = fs.getFile(rcJob.getFilename(), rcJob.getId(),
 						FS.FileType.REDUCER_OUT, pNo, rcJob.getReducer(pNo));
 					reduceFiles.add(reduceFile);
-					// notifyAll();
 				}
 			});
 			reductionRetriever.start();
@@ -77,8 +78,8 @@ public class ReduceCombiner440 extends Thread {
 		return reduceFiles;
 	}
 
-	public void setManager(FacilityManager manager) {
-		this.manager = manager;
+	public void setMaster(FacilityManagerMaster master) {
+		this.master = master;
 	}
 
 	public void setFs(FS fs) {

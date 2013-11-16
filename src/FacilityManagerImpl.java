@@ -222,8 +222,6 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	@Override
 	public void runMapCombineJob(MapCombineJob mcJob) throws RemoteException {
 		MapCombiner440 combiner = new MapCombiner440();
-		System.out.println("Combiner " + getNodeId() + " recieved "
-			+ Arrays.toString(mcJob.getBlockIndices().toArray()));
 
 		combiner.setMaster(master);
 		combiner.setFs(fs);
@@ -256,25 +254,10 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		// Gather and combine reduce files using ReduceCombiner440.
 		ReduceCombiner440 combiner = new ReduceCombiner440();
 
-		combiner.setManager(this);
+		combiner.setMaster(master);
 		combiner.setFs(fs);
 		combiner.setReduceCombineJob(rcJob);
 
 		combiner.start();
 	}
-
-	@Override
-	public boolean outputFinished(File output) {
-		// Upload final output file.
-		if (output == null) {
-			return false;
-		} else {
-			// TODO uncomment uploadCmd
-			// String cmd = String.format("upload %s %s", output.getAbsolutePath(),
-			// output.getName());
-			// uploadCmd(cmd);
-			return true;
-		}
-	}
-
 }

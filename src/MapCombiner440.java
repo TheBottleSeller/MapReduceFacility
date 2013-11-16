@@ -48,6 +48,9 @@ public class MapCombiner440 extends Thread {
 				while ((kvPair = blockReader.readKeyValue()) != null) {
 					int partitionNo = partition(kvPair.getKey().hashCode());
 					partitionWriter = partitionWriters.get(partitionNo);
+					System.out.println(partitionNo);
+					System.out.println(partitionWriter);
+					System.out.println(kvPair);
 					partitionWriter.writeKeyValue(kvPair.getKey(), kvPair.getValue());
 				}
 				blockReader.close();
@@ -100,13 +103,12 @@ public class MapCombiner440 extends Thread {
 	}
 
 	private int partition(int key) {
-		int range = (int) Math.ceil((mcJob.getMaxKey() - mcJob.getMinKey()) * 1.0
+		int range = (int) Math.ceil((mcJob.getMaxKey() - mcJob.getMinKey() + 1) * 1.0
 			/ mcJob.getNumPartitions());
-		System.out.println((mcJob.getMaxKey() - mcJob.getMinKey()) * 1.0
-			/ mcJob.getNumPartitions());
-		System.out.println(Math.ceil((mcJob.getMaxKey() - mcJob.getMinKey()) * 1.0
-			/ mcJob.getNumPartitions()));
-		int partitionNo = (key - mcJob.getMinKey()) / range;
+		System.out.println("Range " + range);
+		System.out.println("Query key " + key);
+		int partitionNo = (int) Math.floor((key - mcJob.getMinKey()) * 1.0 / range);
+		System.out.println("Parition Num " + partitionNo);
 		return partitionNo;
 	}
 

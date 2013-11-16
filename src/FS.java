@@ -15,6 +15,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -88,26 +89,13 @@ public class FS {
 			(int) Math.ceil(totalLines * 1.0 / manager.getConfig().getBlockSize()));
 
 		try {
+			// get distribution of block index -> set of nodes to place block on
 			Map<Integer, Set<Integer>> blockDistribution = master.distributeBlocks(namespace,
 				numBlocks);
 
-			// invert the map to get blockIndex -> nodeId map
-			Map<Integer, Set<Integer>> blockToNodes = new HashMap<Integer, Set<Integer>>();
-			for (int nodeId : blockDistribution.keySet()) {
-				for (int blockIndex : blockDistribution.get(nodeId)) {
-					Set<Integer> nodes = blockToNodes.get(blockIndex);
-					if (nodes == null) {
-						nodes = new HashSet<Integer>();
-						blockToNodes.put(blockIndex, nodes);
-					}
-					nodes.add(nodeId);
-				}
-			}
-
 			BufferedReader reader = new BufferedReader(new FileReader(file));
 			for (int i = 0; i < numBlocks; i++) {
-				Set<Integer> nodes = blockToNodes.get(i);
-				int numNodes = nodes.size();
+				Set<Integer> nodes = blockDistribution.get(i);
 				int numReplicated = 0;
 				int numLines = Math.min(blockSize, totalLines - blockSize * i);
 
@@ -123,7 +111,7 @@ public class FS {
 						} else {
 							success = remoteWriteData(reader, nodeId, namespace, i, numLines);
 						}
-						if (numReplicated != numNodes - 1) {
+						if (numReplicated != nodes.size() - 1) {
 							reader.reset();
 						}
 						if (!success) {
@@ -206,7 +194,6 @@ public class FS {
 				out.flush();
 
 				boolean hasFile = in.readBoolean();
-				System.out.println("hasFile = " + hasFile);
 
 				if (hasFile) {
 					int numBytes = 0;
@@ -214,7 +201,6 @@ public class FS {
 						byte[] bytes = new byte[numBytes];
 						in.readFully(bytes, 0, numBytes);
 						fos.write(bytes, 0, numBytes);
-						System.out.print("numBytes = " + numBytes + ", bytes = " + bytes);
 					}
 
 					fos.flush();
