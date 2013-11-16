@@ -32,7 +32,7 @@ public class Main {
 			}
 		} else {
 			System.out
-				.println("Usage: -m <configFile> for masters and -s <hostname> -p <port> for participants.");
+				.println("Usage: -m <configFile> for masters and -s <hostname> <id> <port> <clustername> for participants.");
 			return;
 		}
 	}

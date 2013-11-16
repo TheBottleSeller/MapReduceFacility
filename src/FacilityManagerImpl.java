@@ -17,10 +17,11 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 	private static final String PROMPT = "=> ";
 	private static final String VALID_COMMANDS = "VALID COMMANDS:\n"
-		+ "upload <filepath> <filename> \t Upload a file to the distributed file system.\n"
+		+ "upload <filepath> <filename> \t \t \t Upload a file to the distributed file system.\n"
 		+ "mapreduce <class-filepath> <input-filename> \t Run the specified mapreduce.\n"
-		+ "ps \t List all active mapreduces.\n"
-		+ "ps -a \t List all active/completed mapreduces.\n" + "exit \t Exit the system.";
+		+ "ps \t \t \t \t \t \t List all active mapreduces.\n"
+		+ "ps -a \t \t \t \t \t \t List all active/completed mapreduces.\n" 
+		+ "exit \t \t \t \t \t \t Exit the system.";
 
 	public static String clusterName;
 	public static String REGISTRY_MASTER_KEY = "_MASTER";
@@ -65,7 +66,6 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 
 		while (scanner.hasNextLine()) {
 			String command = scanner.nextLine();
-			System.out.println(PROMPT);
 			if (command.startsWith("upload")) {
 				uploadCmd(command);
 			} else if (command.startsWith("mapreduce")) {
@@ -89,6 +89,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			} else {
 				System.out.println(VALID_COMMANDS);
 			}
+			System.out.println(PROMPT);
 		}
 	}
 

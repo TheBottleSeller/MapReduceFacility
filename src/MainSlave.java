@@ -3,8 +3,6 @@ import java.rmi.registry.Registry;
 
 public class MainSlave {
 
-	public static FacilityManager master;
-
 	public static void main(String[] args) throws Exception {
 		if (args.length == 4) {
 			Registry registry = LocateRegistry.getRegistry(Integer.parseInt(args[2]));
