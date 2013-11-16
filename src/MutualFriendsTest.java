@@ -11,11 +11,16 @@ public class MutualFriendsTest extends MapReduce440 {
 		@Override
 		public List<KVPair<String, String>> map(String record) {
 			String person = record.substring(0, record.indexOf(" "));
-			String friends = record.substring(record.indexOf(" "));
+			String friends = record.substring(record.indexOf("[") + 1, record.indexOf("]"));
 			List<KVPair<String, String>> tempValues = new ArrayList<KVPair<String, String>>();
 			for (String friend : friends.split(",")) {
-				tempValues.add(new KVPair<String, String>(String.format("[%s,%s]", person, friend),
-					friends));
+				if (person.hashCode() < friend.hashCode()) {
+					tempValues.add(new KVPair<String, String>(String.format("[%s,%s]", person,
+						friend), friends));
+				} else {
+					tempValues.add(new KVPair<String, String>(String.format("[%s,%s]", friend,
+						person), friends));
+				}
 			}
 			return tempValues;
 		}

@@ -28,6 +28,7 @@ public abstract class Mapper440 extends Thread {
 			RecordWriter writer = new RecordWriter(outFile);
 
 			while ((record = reader.readLine()) != null) {
+				System.out.println("record = " + record);
 				List<KVPair<String, String>> mappedRecord = map(record);
 				for (KVPair<String, String> kvPair : mappedRecord) {
 					int keyHash = kvPair.getKey().hashCode();
