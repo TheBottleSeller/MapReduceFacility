@@ -40,6 +40,7 @@ public class MapReduceProgram {
 			jobAssignments.put(i, Collections.synchronizedSet(new HashSet<NodeJob>()));
 		}
 		totalJobs = new AtomicInteger(0);
+		allJobs = Collections.synchronizedMap(new HashMap<Integer, NodeJob>());
 	}
 	
 	public int createNewJobId() {
@@ -85,6 +86,7 @@ public class MapReduceProgram {
 			MapJob job = new MapJob(id, createNewJobId(), -1, filename, blockIndex, clazz);
 			jobAssignments.get(-1).add(job);
 			mapJobs.add(job);
+			allJobs.put(job.getJobId(), job);
 		}
 		return mapJobs;
 	}
@@ -93,6 +95,7 @@ public class MapReduceProgram {
 		MapCombineJob mcJob = new MapCombineJob(this, mapperId, blockIndices);
 		mapCombineJobs.add(mcJob);
 		jobAssignments.get(mapperId).add(mcJob);
+		allJobs.put(mcJob.getJobId(), mcJob);
 		return mcJob;
 	}
 
@@ -100,19 +103,22 @@ public class MapReduceProgram {
 		ReduceJob job = new ReduceJob(this, -1, partitionNum, mappers);
 		reduceJobs.add(job);
 		jobAssignments.get(-1).add(job);
+		allJobs.put(job.getJobId(), job);
 		return job;
 	}
 
 	public ReduceCombineJob createReduceCombineJob() {
 		reduceCombineJob = new ReduceCombineJob(id, createNewJobId(), -1, filename, getNumPartitions(),
 			getPartitionReducers());
+		allJobs.put(reduceCombineJob.getJobId(), reduceCombineJob);
 		return reduceCombineJob;
 	}
 
 	public synchronized boolean mapFinished(MapJob mapJob) {
 		maxKey = Math.max(maxKey, mapJob.getMaxKey());
 		minKey = Math.min(minKey, mapJob.getMinKey());
-		mapJob.setDone(true);
+		allJobs.get(mapJob.getJobId()).setDone(true);
+		
 		System.out.println("Setting job to done " + mapJob);
 		for (MapJob job : mapJobs) {
 			if (!job.isDone()) {
@@ -124,7 +130,7 @@ public class MapReduceProgram {
 	}
 
 	public boolean mapCombineFinished(MapCombineJob job) {
-		job.setDone(true);
+		allJobs.get(job.getJobId()).setDone(true);
 		for (MapCombineJob mcjob : mapCombineJobs) {
 			if (!mcjob.isDone()) {
 				return false;
@@ -134,7 +140,7 @@ public class MapReduceProgram {
 	}
 
 	public boolean reduceFinished(ReduceJob job) {
-		job.setDone(true);
+		allJobs.get(job.getJobId()).setDone(true);
 		for (ReduceJob reduce : reduceJobs) {
 			if (!reduce.isDone()) {
 				return false;
@@ -144,7 +150,7 @@ public class MapReduceProgram {
 	}
 
 	public void reduceCombineFinished(ReduceCombineJob job) {
-		job.setDone(true);
+		allJobs.get(job.getJobId()).setDone(true);
 	}
 
 	public Set<NodeJob> getAssignments(int nodeId) {
