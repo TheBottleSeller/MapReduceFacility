@@ -21,7 +21,7 @@ public interface FacilityManagerMaster extends FacilityManager, Remote {
 	
 	public void jobFinished(boolean success, NodeJob job) throws RemoteException;
 
-	public String getActiveJobsList() throws RemoteException;
+	public String getActiveProgramsList() throws RemoteException;
 	
-	public String getCompletedJobsList() throws RemoteException;
+	public String getCompletedProgramsList() throws RemoteException;
 }

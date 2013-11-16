@@ -20,7 +20,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		+ "upload <filepath> <filename> \t \t \t Upload a file to the distributed file system.\n"
 		+ "mapreduce <class-filepath> <input-filename> \t Run the specified mapreduce.\n"
 		+ "ps \t \t \t \t \t \t List all active mapreduces.\n"
-		+ "ps -a \t \t \t \t \t \t List all active/completed mapreduces.\n" 
+		+ "ps -a \t \t \t \t \t \t List all active/completed mapreduces.\n"
 		+ "exit \t \t \t \t \t \t Exit the system.";
 
 	public static String clusterName;
@@ -49,8 +49,8 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 	}
 
 	// Constructor used by a slave.
-	public FacilityManagerImpl(String masterIp, int id, int port, String clusterName) throws UnknownHostException,
-		IOException, NotBoundException, AlreadyBoundException {
+	public FacilityManagerImpl(String masterIp, int id, int port, String clusterName)
+		throws UnknownHostException, IOException, NotBoundException, AlreadyBoundException {
 		this.id = id;
 		registry = LocateRegistry.createRegistry(port);
 		registry.bind(clusterName + REGISTRY_SLAVE_KEY, UnicastRemoteObject.exportObject(this, 0));
@@ -72,14 +72,14 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 				mapreduceCmd(command);
 			} else if (command.equals("ps")) {
 				try {
-					System.out.println(master.getActiveJobsList());
+					System.out.println(master.getActiveProgramsList());
 				} catch (RemoteException e) {
 					e.printStackTrace();
 				}
 			} else if (command.equals("ps -a")) {
 				try {
-					System.out.println(master.getActiveJobsList());
-					System.out.println(master.getCompletedJobsList());
+					System.out.println(master.getActiveProgramsList());
+					System.out.println(master.getCompletedProgramsList());
 				} catch (RemoteException e) {
 					e.printStackTrace();
 				}
@@ -89,7 +89,7 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 			} else {
 				System.out.println(VALID_COMMANDS);
 			}
-			System.out.println(PROMPT);
+			System.out.print(PROMPT);
 		}
 	}
 

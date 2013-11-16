@@ -51,7 +51,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		while (managers.length != expectedNumParticipants) {
 			Thread.sleep(1000);
 		}
-		
+
 		healthChecker = new HealthChecker(this, expectedNumParticipants);
 		scheduler = new JobScheduler(this, config);
 		dispatcher = new JobDispatcher(this, config);
@@ -118,7 +118,8 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		String slaveIp = getConfig().getParticipantIps()[id];
 		System.out.println("Slave Connected: " + slaveIp);
 		Registry registry = LocateRegistry.getRegistry(slaveIp, rmiPort);
-		FacilityManager slaveManager = (FacilityManager) registry.lookup(clusterName + REGISTRY_SLAVE_KEY);
+		FacilityManager slaveManager = (FacilityManager) registry.lookup(clusterName
+			+ REGISTRY_SLAVE_KEY);
 		managers[id] = slaveManager;
 		return getConfig();
 	}
@@ -211,14 +212,14 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public String getActiveJobsList() throws RemoteException {
+	public String getActiveProgramsList() throws RemoteException {
 		String list = "Job \t Status \t Mappers \t Reducers \n";
 		list = list.concat(scheduler.getActiveProgramsList());
 		return list;
 	}
 
 	@Override
-	public String getCompletedJobsList() throws RemoteException {
+	public String getCompletedProgramsList() throws RemoteException {
 		return scheduler.getCompletedProgramsList();
 	}
 }
