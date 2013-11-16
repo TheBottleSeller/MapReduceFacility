@@ -10,10 +10,14 @@ public class Config implements Serializable {
 
 	private static final long serialVersionUID = 1525640055670485006L;
 
-	private String clusterName;
+	private static final String[] ARGUMENTS = { "CLUSTER_NAME", "MASTER_IP", "PARTICIPANT_IPS",
+		"FS_READ_PORT", "FS_WRITE_PORT", "MR_PORT", "MAX_MAPS_PER_HOST", "MAX_REDUCES_PER_HOST",
+		"REPLICATION_FACTOR", "BLOCK_SIZE" };
 
-	private String masterIp;
-	private String[] participantIps;
+	private String clusterName = null;
+
+	private String masterIp = null;
+	private String[] participantIps = null;
 
 	private int fsReadPort;
 	private int fsWritePort;
@@ -35,17 +39,17 @@ public class Config implements Serializable {
 			String line = null;
 			while ((line = reader.readLine()) != null) {
 				if (!(line.startsWith("#") || line.isEmpty())) {
-					if (line.startsWith("CLUSTER_NAME")) {
-						clusterName = line.substring(line.indexOf('=') + 1);
-						System.out.println("clustername = " + clusterName);
-					} else if (line.startsWith("MASTER_IP")) {
-						masterIp = line.substring(line.indexOf('=') + 1);
+					if (line.startsWith(ARGUMENTS[0])) {
+						clusterName = getArgument(line);
+					} else if (line.startsWith(ARGUMENTS[1])) {
+						masterIp = getArgument(line);
 						InetAddress addr = InetAddress.getByName(masterIp);
 						if (!InetAddress.getLocalHost().equals(addr)) {
+							reader.close();
 							throw new Exception("MASTER_IP must be equal to the local hostname.");
 						}
-					} else if (line.startsWith("PARTICIPANT_IPS")) {
-						participantIps = line.substring(line.indexOf('=') + 1).split(",");
+					} else if (line.startsWith(ARGUMENTS[2])) {
+						participantIps = getArgument(line).replaceAll("\\s+", "").split(",");
 						boolean containsMasterIp = false;
 						for (int i = 0; i < participantIps.length; i++) {
 							if (participantIps[i].equals(masterIp)) {
@@ -54,22 +58,23 @@ public class Config implements Serializable {
 							}
 						}
 						if (!containsMasterIp) {
+							reader.close();
 							throw new Exception("PARTICIPANT_IPS must contain MASTER_IP.");
 						}
-					} else if (line.startsWith("FS_READ_PORT")) {
-						fsReadPort = Integer.parseInt(line.substring(line.indexOf('=') + 1));
-					} else if (line.startsWith("FS_WRITE_PORT")) {
-						fsWritePort = Integer.parseInt(line.substring(line.indexOf('=') + 1));
-					} else if (line.startsWith("MR_PORT")) {
-						mrPort = Integer.parseInt(line.substring(line.indexOf('=') + 1));
-					} else if (line.startsWith("MAX_MAPS_PER_HOST")) {
-						maxMapsPerHost = Integer.parseInt(line.substring(line.indexOf('=') + 1));
-					} else if (line.startsWith("MAX_REDUCES_PER_HOST")) {
-						maxReducesPerHost = Integer.parseInt(line.substring(line.indexOf('=') + 1));
-					} else if (line.startsWith("REPLICATION_FACTOR")) {
-						replicationFactor = Integer.parseInt(line.substring(line.indexOf('=') + 1));
-					} else if (line.startsWith("BLOCK_SIZE")) {
-						blockSize = Integer.parseInt(line.substring(line.indexOf('=') + 1));
+					} else if (line.startsWith(ARGUMENTS[3])) {
+						fsReadPort = Integer.parseInt(getArgument(line));
+					} else if (line.startsWith(ARGUMENTS[4])) {
+						fsWritePort = Integer.parseInt(getArgument(line));
+					} else if (line.startsWith(ARGUMENTS[5])) {
+						mrPort = Integer.parseInt(getArgument(line));
+					} else if (line.startsWith(ARGUMENTS[6])) {
+						maxMapsPerHost = Integer.parseInt(getArgument(line));
+					} else if (line.startsWith(ARGUMENTS[7])) {
+						maxReducesPerHost = Integer.parseInt(getArgument(line));
+					} else if (line.startsWith(ARGUMENTS[8])) {
+						replicationFactor = Integer.parseInt(getArgument(line));
+					} else if (line.startsWith(ARGUMENTS[9])) {
+						blockSize = Integer.parseInt(getArgument(line));
 					}
 				}
 			}
@@ -79,6 +84,20 @@ public class Config implements Serializable {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		if (hasBadArguments()) {
+			throw new Exception("The given config file has invalid or missing argument(s).");
+		}
+	}
+
+	public boolean hasBadArguments() {
+		return (clusterName == null || masterIp == null || participantIps == null || fsReadPort < 1
+			|| fsWritePort < 1 || mrPort < 1 || maxMapsPerHost < 1 || maxReducesPerHost < 1
+			|| replicationFactor < 1 || blockSize < 1);
+	}
+
+	public String getArgument(String line) {
+		return line.substring(line.indexOf('=') + 1).trim();
 	}
 
 	public String getClusterName() {

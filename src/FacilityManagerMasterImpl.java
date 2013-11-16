@@ -58,7 +58,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		dispatcher.setScheduler(scheduler);
 		scheduler.setDispatcher(dispatcher);
 		scheduler.setHealthChecker(healthChecker);
-		
+
 		healthChecker.start();
 		dispatcher.start();
 
@@ -208,5 +208,17 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	public boolean isNodeHealthy(int nodeId) {
 		return managers[nodeId] != null;
+	}
+
+	@Override
+	public String getActiveJobsList() throws RemoteException {
+		String list = "Job \t Status \t Mappers \t Reducers \n";
+		list = list.concat(scheduler.getActiveProgramsList());
+		return list;
+	}
+
+	@Override
+	public String getCompletedJobsList() throws RemoteException {
+		return scheduler.getCompletedProgramsList();
 	}
 }
