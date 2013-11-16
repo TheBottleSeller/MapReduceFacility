@@ -1,8 +1,4 @@
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.lang.Thread.UncaughtExceptionHandler;
 
 public class Main {
 
@@ -30,28 +26,5 @@ public class Main {
 				.println("Usage: -m <configFile> for masters and -s <hostname> -p <port> for participants.");
 			return;
 		}
-	}
-
-	public void createExceptionHandler() {
-		Thread.setDefaultUncaughtExceptionHandler(new UncaughtExceptionHandler() {
-			@Override
-			public void uncaughtException(Thread th, Throwable t) {
-				File log = new File("error.log");
-				if (!log.exists()) {
-					try {
-						log.createNewFile();
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
-				try {
-					PrintWriter writer = new PrintWriter(new FileWriter(log));
-					t.printStackTrace(writer);
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
-				System.out.println(t);
-			}
-		});
 	}
 }
