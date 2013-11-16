@@ -70,10 +70,6 @@ public class FS {
 		return System.getProperty("user.home") + "/";
 	}
 
-	public String getDataRoot() {
-		return DATA_PATH;
-	}
-
 	private void createRootDirectory(String path) {
 		File root = new File(path);
 		if (root.exists() || !root.isDirectory()) {
@@ -176,7 +172,7 @@ public class FS {
 
 	public File getFile(String filename, int jobId, FileType type, int partNo, int fromNode) {
 		String requestedFilename = createFilename(filename, jobId, type, partNo, fromNode);
-		File localFile = new File(getDataRoot() + requestedFilename);
+		File localFile = new File(DATA_PATH + requestedFilename);
 		try {
 			if (fromNode == manager.getNodeId()) {
 				return localFile;
@@ -617,7 +613,7 @@ public class FS {
 					ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
 					String filename = in.readUTF();
-					File localFile = new File(getDataRoot() + filename);
+					File localFile = new File(DATA_PATH + filename);
 
 					if (!localFile.exists()) {
 						out.writeBoolean(false);
@@ -652,36 +648,36 @@ public class FS {
 	}
 
 	public String createDataFilePath(String filename, int blockIndex) {
-		return getDataRoot() + String.format("%s-%d.pt", filename, blockIndex);
+		return DATA_PATH + String.format("%s-%d.pt", filename, blockIndex);
 	}
 
 	public String createPartitionFilePath(String filename, int jobId, int partitionNo)
 		throws RemoteException {
-		return getDataRoot()
+		return DATA_PATH
 			+ createFilename(filename, jobId, FileType.PARTITION, partitionNo, manager.getNodeId());
 	}
 
 	public String createMappedDataFilePath(String filename, int jobId, int blockIndex)
 		throws RemoteException {
-		return getDataRoot()
+		return DATA_PATH
 			+ createFilename(filename, jobId, FileType.MAPPED, blockIndex, manager.getNodeId());
 	}
 
 	public String createReducerInputFilePath(String filename, int jobId, int partitionNo)
 		throws RemoteException {
-		return getDataRoot()
+		return DATA_PATH
 			+ createFilename(filename, jobId, FileType.REDUCER_IN, partitionNo, manager.getNodeId());
 	}
 
 	public String createReducerOutputFilePath(String filename, int jobId, int partitionNo)
 		throws RemoteException {
-		return getDataRoot()
+		return DATA_PATH
 			+ createFilename(filename, jobId, FileType.REDUCER_OUT, partitionNo,
 				manager.getNodeId());
 	}
 
 	public String createFinalOutputFilePath(String filename, int jobId) throws RemoteException {
-		return getDataRoot() + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
+		return DATA_PATH + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
 	}
 
 	// TODO: ONLY USED ONCE.
