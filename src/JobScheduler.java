@@ -348,6 +348,7 @@ public class JobScheduler {
 			if (prog.getUserDefinedClass().getName().equals(classname)
 				&& prog.getFilename().equals(filename)) {
 				prog.stopRunning();
+				activePrograms.remove(prog.getId());
 				stoppedPrograms.add(prog);
 			}
 		}
