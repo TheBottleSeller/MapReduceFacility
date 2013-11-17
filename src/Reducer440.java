@@ -2,14 +2,11 @@ import java.io.File;
 import java.io.IOException;
 import java.rmi.RemoteException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
 public abstract class Reducer440 extends Thread {
 
@@ -87,15 +84,15 @@ public abstract class Reducer440 extends Thread {
 		final Map<File, KVPairs<String, String>> currentKVPairs = new HashMap<File, KVPairs<String, String>>(
 			partitionFiles.size());
 		Set<File> emptyPartitions = new HashSet<File>();
-		
-		// run through each partition, opening RecordReader and keeping track of minimum key
+
+		// run through each partition, opening RecordReader and keeping track of kvpair at top of
+		// file
 		for (File partition : partitionFiles) {
 
 			RecordReader reader = new RecordReader(partition);
 			readers.put(partition, reader);
 			KVPairs<String, String> pairs = reader.readKeyMultiValues();
 			if (pairs == null) {
-				System.out.println("Found empty partition " + partition.getName());
 				emptyPartitions.add(partition);
 				reader.close();
 				continue;
@@ -103,75 +100,56 @@ public abstract class Reducer440 extends Thread {
 
 			currentKVPairs.put(partition, pairs);
 		}
-		
+
 		partitionFiles.removeAll(emptyPartitions);
 
-		if (partitionFiles.isEmpty()) {
-			mergedWriter.close();
-			return mergedFile;
-		}
+		while (!partitionFiles.isEmpty()) {
 
-		SortedSet<File> lowestKeys = new TreeSet<File>(new Comparator<File>() {
+			// find current min key
+			String minKey = null;
+			for (File partition : partitionFiles) {
+				KVPairs<String, String> pair = currentKVPairs.get(partition);
 
-			@Override
-			public int compare(File partition1, File partition2) {
-				KVPairs<String, String> pair1 = currentKVPairs.get(partition1);
-				KVPairs<String, String> pair2 = currentKVPairs.get(partition2);
-				return pair1.getKey().compareTo(pair2.getKey());
+				if (minKey == null || pair.getKey().compareTo(minKey) < 0) {
+					minKey = pair.getKey();
+				}
 			}
 
-		});
+			// merge all kvpairs at top of each partition with minKey
+			KVPairs<String, String> minPair = new KVPairs<String, String>(minKey,
+				new ArrayList<String>());
+			emptyPartitions = new HashSet<File>();
+			for (File partition : partitionFiles) {
 
-		// add the files to the sorted set by current kv pair
-		for (File partition : partitionFiles) {
-			lowestKeys.add(partition);
-		}
+				// get files current kvpair and reader
+				KVPairs<String, String> pair = currentKVPairs.get(partition);
 
-		KVPairs<String, String> minPair = null;
-		
-		System.out.println("Merging partition files from each mapper");
-		System.out.println("Current min " + minPair);
-		while (!lowestKeys.isEmpty()) {
-			// pull out file with lowest current kv pair and remove from sorted set
-			File lowestFile = lowestKeys.first();
-			lowestKeys.remove(lowestFile);
-
-			// get files current kvpair and reader
-			KVPairs<String, String> pair = currentKVPairs.remove(lowestFile);
-			RecordReader reader = readers.get(lowestFile);
-			
-			if (minPair == null) {
-				minPair = pair;
-			} else if (pair.getKey().equals(minPair.getKey())) {
-				// merge the kvpair and currentMin pair if keys are equal
-				minPair.addValues(pair.getValue());
-				System.out.println("Combining values for a key " + minPair);
-			} else {
-				// print the currentMin key to merged file
-				mergedWriter.writeKeyMultiValue(minPair.getKey(), minPair.getValue());
-
-				// set the currentMin to the previously read kvpair
-				minPair = pair;
+				if (pair.getKey().equals(minPair.getKey())) {
+					minPair.addValues(pair.getValue());
+					RecordReader reader = readers.get(partition);
+					KVPairs<String, String> newPair = reader.readKeyMultiValues();
+					if (newPair == null) {
+						emptyPartitions.add(partition);
+						reader.close();
+						readers.remove(partition);
+						currentKVPairs.remove(partition);
+					} else {
+						currentKVPairs.put(partition, newPair);
+					}
+				}
 			}
 
-			// read next pair for lowestFile and add back to set if appropriate
-			KVPairs<String, String> nextPair = reader.readKeyMultiValues();
-			if (nextPair != null) {
-				currentKVPairs.put(lowestFile, nextPair);
-				lowestKeys.add(lowestFile);
-				System.out.println("lowest file has more kv pairs");
-			} else {
-				reader.close();
-			}
+			// print the currentMin key to merged file
+			mergedWriter.writeKeyMultiValue(minPair.getKey(), minPair.getValue());
+
+			partitionFiles.removeAll(emptyPartitions);
 		}
 
-		// print the currentMin key to merged file
-		mergedWriter.writeKeyMultiValue(minPair.getKey(), minPair.getValue());
 		mergedWriter.close();
-
 		return mergedFile;
 	}
 
+	// run reduce on merged partition file
 	public void runReduce(File reduceInput) throws IOException {
 		File reducerOutput = fs.makeReduceOutputFile(job.getFilename(), job.getId(),
 			job.getPartitionNum());
@@ -197,5 +175,4 @@ public abstract class Reducer440 extends Thread {
 	public void setFS(FS fs) {
 		this.fs = fs;
 	}
-
 }

@@ -39,6 +39,7 @@ public class MapReduceProgram {
 		for (int i = -1; i < numParticipants; i++) {
 			jobAssignments.put(i, Collections.synchronizedSet(new HashSet<NodeJob>()));
 		}
+		
 		totalJobs = new AtomicInteger(0);
 		allJobs = Collections.synchronizedMap(new HashMap<Integer, NodeJob>());
 	}
@@ -119,15 +120,21 @@ public class MapReduceProgram {
 		minKey = Math.min(minKey, mapJob.getMinKey());
 		allJobs.get(mapJob.getJobId()).setDone(true);
 		
+		int numberDone = 0;
 		for (MapJob job : mapJobs) {
 			if (!job.isDone()) {
-				return false;
+				//return false;
+			} else {
+				numberDone++;
 			}
 		}
-		return true;
+		System.out.println("Maps finished " + numberDone);
+		System.out.println("Waiting for " + (mapJobs.size() - numberDone));
+		return numberDone == mapJobs.size();
+		//return true;
 	}
 
-	public boolean mapCombineFinished(MapCombineJob job) {
+	public synchronized boolean mapCombineFinished(MapCombineJob job) {
 		allJobs.get(job.getJobId()).setDone(true);
 		for (MapCombineJob mcjob : mapCombineJobs) {
 			if (!mcjob.isDone()) {
@@ -137,7 +144,7 @@ public class MapReduceProgram {
 		return true;
 	}
 
-	public boolean reduceFinished(ReduceJob job) {
+	public synchronized boolean reduceFinished(ReduceJob job) {
 		allJobs.get(job.getJobId()).setDone(true);
 		for (ReduceJob reduce : reduceJobs) {
 			if (!reduce.isDone()) {

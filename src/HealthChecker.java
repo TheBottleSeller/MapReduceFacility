@@ -25,7 +25,6 @@ public class HealthChecker extends Thread {
 				try {
 					heartbeat = slaveManager.heartBeat();
 				} catch (RemoteException e) {
-					e.printStackTrace();
 					heartbeat = false;
 				}
 

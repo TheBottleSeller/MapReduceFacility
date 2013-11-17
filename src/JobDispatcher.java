@@ -3,9 +3,9 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 public class JobDispatcher extends Thread {
-
+	
 	private static final int MAX_QUEUE_SIZE = 1024;
-
+	
 	private FacilityManagerMasterImpl master;
 	private volatile BlockingQueue<NodeJob> jobs;
 	private Thread dispatcher;
@@ -39,7 +39,6 @@ public class JobDispatcher extends Thread {
 					}
 				} else {
 					try {
-						System.out.println("Running job " + job + " on node " + nodeId);
 						master.getManager(nodeId).runJob(job);
 					} catch (RemoteException e) {
 						if (job instanceof MapJob || job instanceof ReduceJob) {
