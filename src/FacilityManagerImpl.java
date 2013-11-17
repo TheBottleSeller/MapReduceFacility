@@ -14,9 +14,9 @@ import java.rmi.server.UnicastRemoteObject;
 public class FacilityManagerImpl implements FacilityManager {
 
 	private static final String VALID_COMMANDS = "VALID COMMANDS:\n"
-		+ "upload <filepath> <filename> \t \t \t Upload a file to the distributed file system.\n"
-		+ "mapreduce <classpath> <input-filename> \t Run the specified mapreduce.\n"
-		+ "stop <classname> <input-filename> \t Stop the specified mapreduce.\n"
+		+ "upload <filepath> <filename> \t \t \t Upload a file to the DFS.\n"
+		+ "mapreduce <classpath> <input-filename> \t \t Run the specified mapreduce.\n"
+		+ "stop <classname> <input-filename> \t \t Stop the specified mapreduce.\n"
 		+ "ps \t \t \t \t \t \t List all active mapreduces.\n"
 		+ "ps -a \t \t \t \t \t \t List all active/stopped/completed mapreduces.\n"
 		+ "exit \t \t \t \t \t \t Exit the system.";

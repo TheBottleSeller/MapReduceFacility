@@ -52,7 +52,9 @@ public class MapCombineJob extends NodeJob {
 
 	@Override
 	public String toString() {
-		return String.format("MapCombineJob %s blockIndices=%s numPartitions=%d maxKey=%d minKey=%d", super.toString(),
-			Arrays.toString(blockIndices.toArray()), numPartitions, maxKey, minKey);
+		return String.format(
+			"MapCombineJob %s blockIndices=%s numPartitions=%d maxKey=%d minKey=%d",
+			super.toString(), Arrays.toString(blockIndices.toArray()), numPartitions, maxKey,
+			minKey);
 	}
 }

@@ -1,23 +1,25 @@
-#The IP address of the master node.
-MASTER_IP=[value0]
+#The cluster name of the facility.
+CLUSTER_NAME=test
 
-#The IP addresses of the participant nodes, separated by commas. The master node must be included in this list.
-PARTICIPANT_IPS=[value1],[value2],[value3]
+#The IP address of the master node.
+MASTER_IP=unix12.andrew.cmu.edu
+
+#The IP addresses of the participant nodes, separated by commas.
+PARTICIPANT_IPS=unix12.andrew.cmu.edu, unix13.andrew.cmu.edu
 
 #The ports for file system communication.
-FS_PORT=[value4]
+FS_READ_PORT=8081
+FS_WRITE_PORT=8082
 
-#The port for MapReduce communication.
-MR_PORT=[value5]
+#The port for RMI.
+RMI_PORT=8083
 
-#The maximum number of Mappers per host.
-MAX_MAPS_PER_HOST=[value6]
-
-#The maximum number of Reducers per host.
-MAX_REDUCES_PER_HOST=[value7]
+#The maximum number of Mappers/Reducers per host.
+MAX_MAPS_PER_HOST=10
+MAX_REDUCES_PER_HOST=10
 
 #The replication factor.
-REPLICATION_FACTOR=[value8]
+REPLICATION_FACTOR=2
 
 #The block size (number of lines per file block).
-BLOCK_SIZE=[value9]
+BLOCK_SIZE=10

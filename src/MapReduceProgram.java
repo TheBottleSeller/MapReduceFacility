@@ -31,7 +31,7 @@ public class MapReduceProgram {
 		this.clazz = clazz;
 		this.numBlocks = numBlocks;
 		this.numParticipants = numParticipants;
-		
+
 		isRunning = true;
 		isInMapPhase = true;
 
@@ -212,7 +212,7 @@ public class MapReduceProgram {
 	public void stopRunning() {
 		isRunning = false;
 	}
-	
+
 	public boolean isRunning() {
 		return isRunning;
 	}
