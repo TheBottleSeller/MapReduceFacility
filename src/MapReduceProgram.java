@@ -21,6 +21,7 @@ public class MapReduceProgram {
 	private volatile Set<MapCombineJob> mapCombineJobs;
 	private volatile Set<ReduceJob> reduceJobs;
 	private volatile ReduceCombineJob reduceCombineJob;
+	private boolean inMapPhase;
 
 	public MapReduceProgram(int id, Class<?> clazz, String filename, int numBlocks,
 		int numParticipants) {
@@ -29,6 +30,8 @@ public class MapReduceProgram {
 		this.clazz = clazz;
 		this.numBlocks = numBlocks;
 		this.numParticipants = numParticipants;
+		
+		inMapPhase = true;
 		maxKey = Integer.MIN_VALUE;
 		minKey = Integer.MAX_VALUE;
 		mapJobs = Collections.synchronizedSet(new HashSet<MapJob>());
@@ -135,6 +138,7 @@ public class MapReduceProgram {
 				return false;
 			}
 		}
+		inMapPhase = false;
 		return true;
 	}
 
@@ -200,6 +204,10 @@ public class MapReduceProgram {
 			}
 		}
 		return blockLocations;
+	}
+	
+	public boolean inMapPhase() {
+		return inMapPhase;
 	}
 
 	public Class<?> getUserDefinedClass() {
