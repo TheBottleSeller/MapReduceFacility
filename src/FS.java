@@ -30,7 +30,6 @@ public class FS {
 	private static int readPort;
 
 	private Map<String, Set<Integer>> localFiles;
-	private Map<Integer, Set<File>> partitionFiles;
 	private FacilityManager manager;
 	private FacilityManagerMaster master;
 	private int blockSize;
@@ -38,7 +37,7 @@ public class FS {
 	private ReadServer readServer;
 
 	private enum Messages {
-		WRITE_DATA, WRITE_CLASS, WRITE_PARTITION
+		WRITE_DATA, WRITE_CLASS
 	};
 
 	public enum FileType {
@@ -47,7 +46,6 @@ public class FS {
 
 	public FS(FacilityManager manager, FacilityManagerMaster master) throws IOException {
 		localFiles = Collections.synchronizedMap(new HashMap<String, Set<Integer>>());
-		partitionFiles = Collections.synchronizedMap(new HashMap<Integer, Set<File>>());
 		this.manager = manager;
 		this.master = master;
 
@@ -156,14 +154,14 @@ public class FS {
 		}
 		return success;
 	}
-	
+
 	public File getFile(String filename, int jobId, FileType type, int partNo, int fromNode) {
 		String requestedFilename = createFilename(filename, jobId, type, partNo, fromNode);
 		return getFile(requestedFilename, fromNode);
 	}
 
 	public File getFile(String requestedFilename, int fromNode) {
-		
+
 		File localFile = new File(DATA_PATH + requestedFilename);
 		try {
 			if (fromNode == manager.getNodeId()) {
@@ -306,10 +304,9 @@ public class FS {
 	}
 
 	/*
-	 * Try to get file block from local drive
-	 * If it does not exist, get the file from a node with the file block
-	 * There is no explicit map of locally cached files, just whether or not the file is found on
-	 * disk.
+	 * Try to get file block from local drive If it does not exist, get the file from a node with
+	 * the file block There is no explicit map of locally cached files, just whether or not the file
+	 * is found on disk.
 	 */
 	public File getFileBlock(MapJob job) {
 		String filename = job.getFilename();
@@ -483,8 +480,6 @@ public class FS {
 						success = readDataFile(in);
 					} else if (msg.equals(Messages.WRITE_CLASS)) {
 						success = readClassFile(in);
-					} else if (msg.equals(Messages.WRITE_PARTITION)) {
-						success = readPartitionFile(in);
 					}
 
 				} catch (IOException e) {
@@ -554,43 +549,6 @@ public class FS {
 					e.printStackTrace();
 					return false;
 				}
-			}
-
-			private boolean readPartitionFile(ObjectInputStream in) {
-				boolean success = false;
-				PrintWriter writer = null;
-				try {
-					int jobId = in.readInt();
-					String filename = in.readUTF();
-					File newFile = new File(getRoot() + DATA_PATH + filename);
-					if (newFile.exists()) {
-						newFile.delete();
-					}
-					newFile.createNewFile();
-					writer = new PrintWriter(new FileOutputStream(newFile));
-					while (in.readBoolean()) {
-						String line = in.readUTF();
-						writer.println(line);
-					}
-					synchronized (partitionFiles) {
-
-						Set<File> files = partitionFiles.get(jobId);
-						if (partitionFiles == null) {
-							files = new HashSet<File>();
-							partitionFiles.put(jobId, files);
-						}
-						files.add(newFile);
-					}
-
-					success = true;
-				} catch (IOException e) {
-					e.printStackTrace();
-				} finally {
-					if (writer != null) {
-						writer.close();
-					}
-				}
-				return success;
 			}
 		}
 	}
@@ -665,7 +623,7 @@ public class FS {
 	public String createDataFilePath(String filename, int blockIndex) {
 		return DATA_PATH + createDataFilename(filename, blockIndex);
 	}
-	
+
 	public String createDataFilename(String filename, int blockIndex) {
 		return String.format("%s-%d.pt", filename, blockIndex);
 	}
@@ -696,7 +654,7 @@ public class FS {
 	}
 
 	public String createFinalOutputFilePath(String filename, int jobId) throws RemoteException {
-		return DATA_PATH + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
+		return getRoot() + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
 	}
 
 	public String createClassFilePath(String filename) {

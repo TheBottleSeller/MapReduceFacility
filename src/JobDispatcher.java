@@ -3,7 +3,7 @@ import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
 public class JobDispatcher extends Thread {
-	
+
 	private FacilityManagerMasterImpl master;
 	private volatile BlockingQueue<NodeJob> jobs;
 	private JobScheduler scheduler;

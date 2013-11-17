@@ -20,7 +20,7 @@ public class Main {
 		} else if (args.length == 3) {
 			// Run command prompt from participant.
 			Registry registry = LocateRegistry.getRegistry(Integer.parseInt(args[1]));
-			facilityManager = (FacilityManager) registry.lookup(args[3]
+			facilityManager = (FacilityManager) registry.lookup(args[2]
 				+ FacilityManagerImpl.REGISTRY_SLAVE_KEY);
 			if (facilityManager == null) {
 				System.out.println("Invalid port and clustername.");

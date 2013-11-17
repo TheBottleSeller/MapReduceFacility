@@ -14,10 +14,11 @@ import java.rmi.server.UnicastRemoteObject;
 public class FacilityManagerImpl implements FacilityManager {
 
 	private static final String VALID_COMMANDS = "VALID COMMANDS:\n"
-		+ "upload <filepath> <filename> \t \t \t Upload a file to the distributed file system.\n"
-		+ "mapreduce <class-filepath> <input-filename> \t Run the specified mapreduce.\n"
+		+ "upload <filepath> <filename> \t \t \t Upload a file to the DFS.\n"
+		+ "mapreduce <classpath> <input-filename> \t \t Run the specified mapreduce.\n"
+		+ "stop <classname> <input-filename> \t \t Stop the specified mapreduce.\n"
 		+ "ps \t \t \t \t \t \t List all active mapreduces.\n"
-		+ "ps -a \t \t \t \t \t \t List all active/completed mapreduces.\n"
+		+ "ps -a \t \t \t \t \t \t List all active/stopped/completed mapreduces.\n"
 		+ "exit \t \t \t \t \t \t Exit the system.";
 
 	public static String clusterName;
@@ -57,23 +58,17 @@ public class FacilityManagerImpl implements FacilityManager {
 		fs = new FS(this, master);
 	}
 
-	public String runCommand(String command) {
+	public String runCommand(String command) throws RemoteException {
 		if (command.startsWith("upload")) {
 			uploadCmd(command);
 		} else if (command.startsWith("mapreduce")) {
 			mapreduceCmd(command);
+		} else if (command.startsWith("stop")) {
+			stopCmd(command);
 		} else if (command.equals("ps")) {
-			try {
-				return master.getActiveProgramsList();
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
+			return master.getActiveProgramsList();
 		} else if (command.equals("ps -a")) {
-			try {
-				return master.getActiveProgramsList().concat(master.getCompletedProgramsList());
-			} catch (RemoteException e) {
-				e.printStackTrace();
-			}
+			return master.getActiveProgramsList().concat(master.getCompletedProgramsList());
 		} else if (command.equals("exit")) {
 			exit();
 		} else {
@@ -113,12 +108,12 @@ public class FacilityManagerImpl implements FacilityManager {
 		String[] params = command.split(" ");
 		if (params.length != 3) {
 			System.out.println("This command is of the form: "
-				+ "mapreduce <class-filename> <input-file-namespace> ");
+				+ "mapreduce <classpath> <input-filename> ");
 			return;
 		}
 
 		String classPath = params[1];
-		String namespace = params[2];
+		String filename = params[2];
 		File classfile = new File(classPath);
 		if (!classfile.exists()) {
 			System.out.println("The local java class file cannot be found.");
@@ -126,7 +121,7 @@ public class FacilityManagerImpl implements FacilityManager {
 		}
 
 		try {
-			if (!master.hasDistributedFile(namespace)) {
+			if (!master.hasDistributedFile(filename)) {
 				System.out.println("The input file has not been uploaded into the distributed "
 					+ "file system.");
 				return;
@@ -134,11 +129,11 @@ public class FacilityManagerImpl implements FacilityManager {
 			URLClassLoader ucl = new URLClassLoader(new URL[] { new URL("file://" + fs.getRoot()) });
 			Class<?> clazz = ucl.loadClass(classPath.substring(0, classPath.indexOf('.')));
 
-			int jobId = dispatchJob(clazz, namespace);
+			int jobId = dispatchJob(clazz, filename);
 			if (jobId == -1) {
-				System.out.println("There was a problem running the map reduce job");
+				System.out.println("There was a problem running the map reduce job.");
 			} else {
-				System.out.println("The job was succesfully dispatched with id " + jobId);
+				System.out.printf("The job was succesfully dispatched with id %s.%n", jobId);
 			}
 		} catch (MalformedURLException e) {
 			System.out.println("There was an error loading the class file.");
@@ -147,6 +142,16 @@ public class FacilityManagerImpl implements FacilityManager {
 		} catch (RemoteException e) {
 			System.out.println("There was an error communicating with the master.");
 		}
+	}
+
+	public void stopCmd(String command) throws RemoteException {
+		String[] params = command.split(" ");
+		if (params.length != 3) {
+			System.out.println("This command is of the form: "
+				+ "stop <classname> <input-filename> ");
+			return;
+		}
+		master.stopProgram(params[1], params[2]);
 	}
 
 	public Config getConfig() {

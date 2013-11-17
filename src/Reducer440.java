@@ -50,12 +50,10 @@ public abstract class Reducer440 extends Thread {
 			Thread partitionRetriever = new Thread(new Runnable() {
 				@Override
 				public void run() {
-
 					// blocks until the file is retrieved
 					File partitionFile = fs.getFile(job.getFilename(), job.getId(),
 						FS.FileType.PARTITION, job.getPartitionNum(), mapperId);
 					partitionFiles.add(partitionFile);
-					// notifyAll();
 				}
 			});
 			partitionRetriever.start();
@@ -64,7 +62,6 @@ public abstract class Reducer440 extends Thread {
 		while (partitionFiles.size() != job.getMappers().size()) {
 			try {
 				Thread.sleep(1000);
-				// wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
