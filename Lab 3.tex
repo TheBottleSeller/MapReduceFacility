@@ -77,17 +77,17 @@ The Map Reduce facility will properly boot up, and will reach out to all the
 \question{III} {Build, Deploy, and Run}
 % Tell us how to cleanly build, deploy, and run your project.
 
-We have provided a config file template.
+We have provided a sample config file, \texttt{config.txt} for your convenience. This config file specifies the cluster name, master IP, participant IPs (which include the master IP), the ports for file system communication, the port for RMI, the maximum number of mappers and reducers per host, the replication factor, and the block size.
 
-First, run the master using the following command: 
+To run the master, use the machine specified in the config file and run the following command:
 
 \begin{center}\texttt{java -jar MapReduceFacility.jar -m <config-file>}\end{center}
 
-Then, programs can be executed from a participant (using the following command:
+To execute programs from a participant, use a participant machine specified in the config file and run the following command: 
 
-\begin{center}\texttt{java -jar MapReduceFacility.jar -p <port> -c <cluster-name>}\end{center}
+\begin{center}\texttt{java -jar MapReduceFacility.jar -s <rmi-port> <cluster-name>}\end{center}
 
-Where \texttt{port} is the MR port that was specified in the config file passed to the master and \texttt{cluster-name} is the cluster name that was specified in the config file passed to the master.
+Where \texttt{rmi-port} and \texttt{cluster-name} match those specified in the config file. 
 
 \question{IV} {Dependencies}
 % Highlight any dependencies and software or system requirements. 
@@ -95,7 +95,7 @@ Where \texttt{port} is the MR port that was specified in the config file passed 
 Our project depends on Java 1.6.0 or higher.
 
 \question{V} {Running and Testing}
-% Tell us how to run and test your framework.
+% Tell us how to run and test your framework
 
 Running \texttt{MainServer} will create a registry local to the server's machine and create/bind two \texttt{TestObject}s to this registry. Then, running \texttt{MainClient -c <hostname>} will create a registry local to the client's machine, get the registry local to the server's machine, create/bind two \texttt{TestObject}s to the former, and lookup the two \texttt{TestObjects} from the latter. After this, a series of 17 tests will be invoked on one stub using the two local objects and other stub. As each test passes, a corresponding message will be printed out. Here, we will describe these tests in detail: \\
 

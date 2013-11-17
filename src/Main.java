@@ -17,7 +17,7 @@ public class Main {
 			facilityManager = new FacilityManagerMasterImpl(config);
 			master = facilityManager;
 			displayPrompt(facilityManager);
-		} else if (args.length == 4) {
+		} else if (args.length == 3) {
 			// Run command prompt from participant.
 			Registry registry = LocateRegistry.getRegistry(Integer.parseInt(args[1]));
 			facilityManager = (FacilityManager) registry.lookup(args[3]
@@ -47,7 +47,7 @@ public class Main {
 			}
 		} else {
 			System.out
-				.println("Usage: -m <configFile> for masters and -s <hostname> <id> <port> <clustername> for participants.");
+				.println("Usage: -m <configFile> for masters and -s <rmi-port> <cluster-name> for participants.");
 			return;
 		}
 	}

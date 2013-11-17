@@ -11,7 +11,7 @@ public class Config implements Serializable {
 	private static final long serialVersionUID = 1525640055670485006L;
 
 	private static final String[] ARGUMENTS = { "CLUSTER_NAME", "MASTER_IP", "PARTICIPANT_IPS",
-		"FS_READ_PORT", "FS_WRITE_PORT", "MR_PORT", "MAX_MAPS_PER_HOST", "MAX_REDUCES_PER_HOST",
+		"FS_READ_PORT", "FS_WRITE_PORT", "RMI_PORT", "MAX_MAPS_PER_HOST", "MAX_REDUCES_PER_HOST",
 		"REPLICATION_FACTOR", "BLOCK_SIZE" };
 
 	private String clusterName = null;
@@ -124,7 +124,11 @@ public class Config implements Serializable {
 		return fsWritePort;
 	}
 
+<<<<<<< HEAD
 	public int getMrPort() {
+=======
+	public int getRmiPort() {
+>>>>>>> a9089f7f942727e120e810ee55cfa8fe0c370483
 		return rmiPort;
 	}
 
