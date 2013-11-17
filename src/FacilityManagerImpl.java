@@ -10,11 +10,9 @@ import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
-import java.util.Scanner;
 
-public class FacilityManagerImpl extends Thread implements FacilityManager {
+public class FacilityManagerImpl implements FacilityManager {
 
-	private static final String PROMPT = "=> ";
 	private static final String VALID_COMMANDS = "VALID COMMANDS:\n"
 		+ "upload <filepath> <filename> \t \t \t Upload a file to the distributed file system.\n"
 		+ "mapreduce <class-filepath> <input-filename> \t Run the specified mapreduce.\n"
@@ -59,37 +57,29 @@ public class FacilityManagerImpl extends Thread implements FacilityManager {
 		fs = new FS(this, master);
 	}
 
-	public void run() {
-		Scanner scanner = new Scanner(System.in);
-		System.out.print(PROMPT);
-
-		while (scanner.hasNextLine()) {
-			String command = scanner.nextLine();
-			if (command.startsWith("upload")) {
-				uploadCmd(command);
-			} else if (command.startsWith("mapreduce")) {
-				mapreduceCmd(command);
-			} else if (command.equals("ps")) {
-				try {
-					System.out.println(master.getActiveProgramsList());
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			} else if (command.equals("ps -a")) {
-				try {
-					System.out.println(master.getActiveProgramsList());
-					System.out.println(master.getCompletedProgramsList());
-				} catch (RemoteException e) {
-					e.printStackTrace();
-				}
-			} else if (command.equals("exit")) {
-				// Exit the system.
-				exit();
-			} else {
-				System.out.println(VALID_COMMANDS);
+	public String runCommand(String command) {
+		if (command.startsWith("upload")) {
+			uploadCmd(command);
+		} else if (command.startsWith("mapreduce")) {
+			mapreduceCmd(command);
+		} else if (command.equals("ps")) {
+			try {
+				return master.getActiveProgramsList();
+			} catch (RemoteException e) {
+				e.printStackTrace();
 			}
-			System.out.print(PROMPT);
+		} else if (command.equals("ps -a")) {
+			try {
+				return master.getActiveProgramsList().concat(master.getCompletedProgramsList());
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		} else if (command.equals("exit")) {
+			exit();
+		} else {
+			return VALID_COMMANDS;
 		}
+		return null;
 	}
 
 	private void uploadCmd(String command) {
