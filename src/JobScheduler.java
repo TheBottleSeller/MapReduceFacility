@@ -48,11 +48,12 @@ public class JobScheduler {
 		for (MapReduceProgram prog : activePrograms.values()) {
 			String workerList[];
 
-			Integer[] mappers = (Integer[]) prog.getMappers().toArray();
-			if (mappers.length > 0) {
-				workerList = new String[mappers.length];
-				for (int i = 0; i < mappers.length; i++) {
-					workerList[i] = (config.getParticipantIps()[i]);
+			Set<Integer> mappers = prog.getMappers();
+			if (mappers.size() > 0) {
+				int i = 0;
+				workerList = new String[mappers.size()];
+				for (Integer mapper : mappers) {
+					workerList[i++] = config.getParticipantIps()[mapper];
 				}
 			} else {
 				workerList = config.getParticipantIps();
@@ -61,7 +62,7 @@ public class JobScheduler {
 			list = list.concat(prog.getFilename() + " " + prog.getClass().getName()
 				+ "\t Active \t");
 
-			if (mappers.length > 0) {
+			if (mappers.size() > 0) {
 				for (int i = 0; i < workerList.length; i++) {
 					list = list.concat(workerList[i] + "\n");
 				}
