@@ -124,11 +124,7 @@ public class Config implements Serializable {
 		return fsWritePort;
 	}
 
-<<<<<<< HEAD
-	public int getMrPort() {
-=======
 	public int getRmiPort() {
->>>>>>> a9089f7f942727e120e810ee55cfa8fe0c370483
 		return rmiPort;
 	}
 
