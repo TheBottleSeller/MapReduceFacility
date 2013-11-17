@@ -23,7 +23,7 @@ import java.util.Set;
 
 public class FS {
 
-	private static final String DATA_PATH = "/tmp/data440-neha/";
+	private static final String DATA_PATH = "/tmp/data440/";
 	private static final String CLASS_PATH = "class440/";
 
 	private static int writePort;
@@ -156,9 +156,14 @@ public class FS {
 		}
 		return success;
 	}
-
+	
 	public File getFile(String filename, int jobId, FileType type, int partNo, int fromNode) {
 		String requestedFilename = createFilename(filename, jobId, type, partNo, fromNode);
+		return getFile(requestedFilename, fromNode);
+	}
+
+	public File getFile(String requestedFilename, int fromNode) {
+		
 		File localFile = new File(DATA_PATH + requestedFilename);
 		try {
 			if (fromNode == manager.getNodeId()) {
@@ -300,8 +305,33 @@ public class FS {
 		}
 	}
 
-	public File getFileBlock(String filename, int blockIndex) {
-		return new File(createDataFilePath(filename, blockIndex));
+	/*
+	 * Try to get file block from local drive
+	 * If it does not exist, get the file from a node with the file block
+	 * There is no explicit map of locally cached files, just whether or not the file is found on
+	 * disk.
+	 */
+	public File getFileBlock(MapJob job) {
+		String filename = job.getFilename();
+		int blockIndex = job.getBlockIndex();
+		File localFileBlock = new File(createDataFilePath(filename, blockIndex));
+		if (localFileBlock.exists()) {
+			return localFileBlock;
+		} else {
+			try {
+				Map<Integer, Set<Integer>> blockLocations = master.getBlockLocations(filename);
+				Set<Integer> nodes = blockLocations.get(blockIndex);
+				for (int fromNode : nodes) {
+					localFileBlock = getFile(createDataFilename(filename, blockIndex), fromNode);
+					if (localFileBlock != null) {
+						return localFileBlock;
+					}
+				}
+			} catch (RemoteException e) {
+				e.printStackTrace();
+			}
+		}
+		return null;
 	}
 
 	public File makeMappedFileBlock(String filename, int blockIndex, int jobId) throws IOException {
@@ -633,7 +663,11 @@ public class FS {
 	}
 
 	public String createDataFilePath(String filename, int blockIndex) {
-		return DATA_PATH + String.format("%s-%d.pt", filename, blockIndex);
+		return DATA_PATH + createDataFilename(filename, blockIndex);
+	}
+	
+	public String createDataFilename(String filename, int blockIndex) {
+		return String.format("%s-%d.pt", filename, blockIndex);
 	}
 
 	public String createPartitionFilePath(String filename, int jobId, int partitionNo)
@@ -665,12 +699,10 @@ public class FS {
 		return DATA_PATH + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
 	}
 
-	// TODO: ONLY USED ONCE.
 	public String createClassFilePath(String filename) {
 		return String.format("%s%s%s.class", getRoot(), CLASS_PATH, filename);
 	}
 
-	// TODO: ONLY USED ONCE.
 	public String createFilename(String filename, int jobId, FileType fileType) {
 		return String.format("%s-%s-jobId-%d", filename, fileType.toString(), jobId);
 	}

@@ -1,23 +1,19 @@
 import java.rmi.RemoteException;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 
 public class JobDispatcher extends Thread {
 	
-	private static final int MAX_QUEUE_SIZE = 1024;
-	
 	private FacilityManagerMasterImpl master;
 	private volatile BlockingQueue<NodeJob> jobs;
-	private Thread dispatcher;
 	private JobScheduler scheduler;
 
 	public JobDispatcher(FacilityManagerMasterImpl master, Config config) {
 		this.master = master;
-		dispatcher = this;
-		jobs = new ArrayBlockingQueue<NodeJob>(1024);
+		jobs = new LinkedBlockingQueue<NodeJob>();
 	}
 
-	public void enqueue(NodeJob job) {
+	public synchronized void enqueue(NodeJob job) {
 		try {
 			jobs.put(job);
 		} catch (InterruptedException e) {
@@ -28,7 +24,6 @@ public class JobDispatcher extends Thread {
 	@Override
 	public void run() {
 		while (true) {
-			// TODO potential race condition?
 			NodeJob job = null;
 			try {
 				job = jobs.take();

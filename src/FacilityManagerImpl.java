@@ -141,9 +141,9 @@ public class FacilityManagerImpl implements FacilityManager {
 				System.out.println("The job was succesfully dispatched with id " + jobId);
 			}
 		} catch (MalformedURLException e) {
-			e.printStackTrace();
+			System.out.println("There was an error loading the class file.");
 		} catch (ClassNotFoundException e) {
-			e.printStackTrace();
+			System.out.println("There was an error loading the class file.");
 		} catch (RemoteException e) {
 			System.out.println("There was an error communicating with the master.");
 		}

@@ -245,9 +245,8 @@ public class JobScheduler {
 		MapReduceProgram prog = activePrograms.get(jobId);
 		boolean mapPhaseFinished = prog.mapFinished(mapJob);
 		if (mapPhaseFinished) {
-			System.out.println("\nMAP PHASE FINISHED\n");
 			// Start combine phase on all of the mappers
-
+			
 			// make map of nodeId -> list of blocks mapped on node
 			Map<Integer, Set<Integer>> nodeToBlocks = prog.getNodeToBlocks();
 			for (Integer mapperId : nodeToBlocks.keySet()) {
@@ -263,7 +262,6 @@ public class JobScheduler {
 
 		boolean combinePhaseFinished = prog.mapCombineFinished(job);
 		if (combinePhaseFinished) {
-			System.out.println("\nMAP COMBINE PHASE FINISHED\n");
 			Set<Integer> mappers = prog.getMappers();
 			int numPartitions = prog.getNumPartitions();
 			for (int partitionNo = 0; partitionNo < numPartitions; partitionNo++) {
@@ -277,7 +275,6 @@ public class JobScheduler {
 		MapReduceProgram prog = activePrograms.get(job.getId());
 		boolean reducePhaseFinished = prog.reduceFinished(job);
 		if (reducePhaseFinished) {
-			System.out.println("\nREDUCE PHASE FINISHED\n");
 			// Gather reduction files, combine them, and upload the results.
 			ReduceCombineJob rcJob = prog.createReduceCombineJob();
 			jobDispatcher.enqueue(rcJob);

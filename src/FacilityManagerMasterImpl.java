@@ -173,7 +173,6 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	@Override
 	public int dispatchJob(Class<?> clazz, String filename) throws RemoteException {
-		System.out.println("Dispatched job on master");
 		Map<Integer, Set<Integer>> blockLocations = fsTable.get(filename);
 		if (blockLocations == null) {
 			return -1;
@@ -187,12 +186,10 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	}
 
 	@Override
-	public void jobFinished(boolean success, NodeJob job) throws RemoteException {
+	public synchronized void jobFinished(boolean success, NodeJob job) throws RemoteException {
 		if (!success) {
-			System.out.println("Job finished unsuccessfully " + job);
 			dispatcher.enqueue(job);
 		} else {
-			System.out.println("Job finished successfully " + job);
 			scheduler.jobFinished(job);
 		}
 	}

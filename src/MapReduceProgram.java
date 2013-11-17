@@ -120,18 +120,12 @@ public class MapReduceProgram {
 		minKey = Math.min(minKey, mapJob.getMinKey());
 		allJobs.get(mapJob.getJobId()).setDone(true);
 		
-		int numberDone = 0;
 		for (MapJob job : mapJobs) {
 			if (!job.isDone()) {
-				//return false;
-			} else {
-				numberDone++;
+				return false;
 			}
 		}
-		System.out.println("Maps finished " + numberDone);
-		System.out.println("Waiting for " + (mapJobs.size() - numberDone));
-		return numberDone == mapJobs.size();
-		//return true;
+		return true;
 	}
 
 	public synchronized boolean mapCombineFinished(MapCombineJob job) {
@@ -166,7 +160,7 @@ public class MapReduceProgram {
 		int numAssignments = 0;
 		Set<NodeJob> assignments = jobAssignments.get(nodeId);
 		for (NodeJob job : assignments) {
-			if (job.getClass().equals(jobClazz)) {
+			if (job.getClass().equals(jobClazz) && !job.isDone()) {
 				numAssignments++;
 			}
 		}

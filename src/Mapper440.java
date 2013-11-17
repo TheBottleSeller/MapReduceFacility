@@ -21,14 +21,13 @@ public abstract class Mapper440 extends Thread {
 			// open user file block as input and output file
 			File outFile = fs.makeMappedFileBlock(mapJob.getFilename(), mapJob.getBlockIndex(),
 				mapJob.getId());
-			File inFile = fs.getFileBlock(mapJob.getFilename(), mapJob.getBlockIndex());
+			File inFile = fs.getFileBlock(mapJob);
 
 			// open associated reader and writer
 			BufferedReader reader = new BufferedReader(new FileReader(inFile));
 			RecordWriter writer = new RecordWriter(outFile);
 
 			while ((record = reader.readLine()) != null) {
-				System.out.println("record = " + record);
 				List<KVPair<String, String>> mappedRecord = map(record);
 				for (KVPair<String, String> kvPair : mappedRecord) {
 					int keyHash = kvPair.getKey().hashCode();
