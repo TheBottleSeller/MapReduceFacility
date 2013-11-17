@@ -56,7 +56,6 @@ public class ReduceCombiner440 extends Thread {
 			Thread reductionRetriever = new Thread(new Runnable() {
 				@Override
 				public void run() {
-
 					// blocks until the file is retrieved
 					File reduceFile = fs.getFile(rcJob.getFilename(), rcJob.getId(),
 						FS.FileType.REDUCER_OUT, pNo, rcJob.getReducer(pNo));
@@ -69,7 +68,6 @@ public class ReduceCombiner440 extends Thread {
 		while (reduceFiles.size() != numPartitions) {
 			try {
 				Thread.sleep(1000);
-				// wait();
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}

@@ -696,7 +696,7 @@ public class FS {
 	}
 
 	public String createFinalOutputFilePath(String filename, int jobId) throws RemoteException {
-		return DATA_PATH + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
+		return "data440/" + createFilename(filename, jobId, FileType.FINAL_OUTPUT);
 	}
 
 	public String createClassFilePath(String filename) {

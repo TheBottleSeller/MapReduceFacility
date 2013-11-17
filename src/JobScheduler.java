@@ -10,7 +10,8 @@ public class JobScheduler {
 
 	private FacilityManagerMasterImpl master;
 	private Config config;
-	private volatile Map<Integer, MapReduceProgram> activePrograms;
+	private Map<Integer, MapReduceProgram> activePrograms;
+	private Set<MapReduceProgram> stoppedPrograms;
 	private Map<Integer, MapReduceProgram> completedPrograms;
 	private AtomicInteger[] activeMaps;
 	private AtomicInteger[] activeReduces;
@@ -28,8 +29,11 @@ public class JobScheduler {
 		this.config = config;
 		this.maxMaps = config.getMaxMapsPerHost();
 		this.maxReduces = config.getMaxReducesPerHost();
+
 		activePrograms = Collections.synchronizedMap(new HashMap<Integer, MapReduceProgram>());
+		stoppedPrograms = Collections.synchronizedSet(new HashSet<MapReduceProgram>());
 		completedPrograms = Collections.synchronizedMap(new HashMap<Integer, MapReduceProgram>());
+
 		int numParticipants = config.getParticipantIps().length;
 		activeMaps = new AtomicInteger[numParticipants];
 		activeReduces = new AtomicInteger[numParticipants];
@@ -45,7 +49,7 @@ public class JobScheduler {
 	public String getActiveProgramsList() {
 		String list = "";
 		for (MapReduceProgram prog : activePrograms.values()) {
-			if (prog.inMapPhase()) {
+			if (prog.isInMapPhase()) {
 				boolean first = true;
 				Set<Integer> mappers = prog.getMappers();
 				for (Integer mapper : mappers) {
@@ -83,6 +87,11 @@ public class JobScheduler {
 	public String getCompletedProgramsList() {
 		String list = "";
 
+		for (MapReduceProgram prog : stoppedPrograms) {
+			list = list.concat(String.format("%-20s %-10s", prog.getUserDefinedClass().getName()
+				+ " " + prog.getFilename(), "Stopped"));
+		}
+
 		for (MapReduceProgram prog : completedPrograms.values()) {
 			list = list.concat(String.format("%-20s %-10s", prog.getUserDefinedClass().getName()
 				+ " " + prog.getFilename(), "Completed"));
@@ -116,9 +125,6 @@ public class JobScheduler {
 			nodes.removeAll(getMaxedMappers(nodes));
 
 			if (nodes.isEmpty()) {
-				// TODO this is where we send a map job to a mapper without the block
-				// needs to getFile it, this should be handled on the job recieving side
-
 				// get the minimum worker across all nodes
 				int numParticipants = config.getParticipantIps().length;
 				for (int i = 0; i < numParticipants; i++) {
@@ -221,9 +227,11 @@ public class JobScheduler {
 			config.getParticipantIps().length);
 		activePrograms.put(progId, prog);
 
-		Set<MapJob> mapJobs = prog.createMapJobs();
-		for (MapJob mapJob : mapJobs) {
-			jobDispatcher.enqueue(mapJob);
+		if (prog.isRunning()) {
+			Set<MapJob> mapJobs = prog.createMapJobs();
+			for (MapJob mapJob : mapJobs) {
+				jobDispatcher.enqueue(mapJob);
+			}
 		}
 		return progId;
 	}
@@ -246,9 +254,9 @@ public class JobScheduler {
 		int jobId = mapJob.getId();
 		MapReduceProgram prog = activePrograms.get(jobId);
 		boolean mapPhaseFinished = prog.mapFinished(mapJob);
-		if (mapPhaseFinished) {
+		if (mapPhaseFinished && prog.isRunning()) {
 			// Start combine phase on all of the mappers
-			
+
 			// make map of nodeId -> list of blocks mapped on node
 			Map<Integer, Set<Integer>> nodeToBlocks = prog.getNodeToBlocks();
 			for (Integer mapperId : nodeToBlocks.keySet()) {
@@ -263,7 +271,7 @@ public class JobScheduler {
 		MapReduceProgram prog = activePrograms.get(job.getId());
 
 		boolean combinePhaseFinished = prog.mapCombineFinished(job);
-		if (combinePhaseFinished) {
+		if (combinePhaseFinished && prog.isRunning()) {
 			Set<Integer> mappers = prog.getMappers();
 			int numPartitions = prog.getNumPartitions();
 			for (int partitionNo = 0; partitionNo < numPartitions; partitionNo++) {
@@ -276,7 +284,7 @@ public class JobScheduler {
 	public void reduceFinished(ReduceJob job) {
 		MapReduceProgram prog = activePrograms.get(job.getId());
 		boolean reducePhaseFinished = prog.reduceFinished(job);
-		if (reducePhaseFinished) {
+		if (reducePhaseFinished && prog.isRunning()) {
 			// Gather reduction files, combine them, and upload the results.
 			ReduceCombineJob rcJob = prog.createReduceCombineJob();
 			jobDispatcher.enqueue(rcJob);
@@ -286,17 +294,24 @@ public class JobScheduler {
 	public void reduceCombineFinished(ReduceCombineJob job) {
 		MapReduceProgram prog = activePrograms.remove(job.getId());
 		prog.reduceCombineFinished(job);
-		System.out.println("The program has finished");
+		System.out.println("The program has finished.");
 		completedPrograms.put(prog.getId(), prog);
 	}
 
 	public void nodeDied(int nodeId) {
+		// TODO: Maintain replication factor.
 		for (MapReduceProgram prog : activePrograms.values()) {
 			Set<NodeJob> jobs = prog.getAssignments(nodeId);
 			for (NodeJob job : jobs) {
 				job.setDone(false);
 				if (job instanceof MapCombineJob) {
-					// TODO STOPPED HERE
+					/*
+					 * TODO: When a node performing a MapCombineJob fails, the maps completed on
+					 * that node need to be redistributed. If the node(s) that the maps are re-
+					 * distributed to have already started performing a MapCombineJob, that job
+					 * needs to be stopped in lieu of the new map jobs. Once these map jobs are
+					 * completed, a new MapCombineJob can start.
+					 */
 				}
 				jobDispatcher.enqueue(job);
 			}
@@ -325,5 +340,15 @@ public class JobScheduler {
 			numMappers = prog.getNumAssignments(nodeId, clazz);
 		}
 		return numMappers;
+	}
+
+	public void stopProgram(String classname, String filename) {
+		for (MapReduceProgram prog : activePrograms.values()) {
+			if (prog.getUserDefinedClass().getName().equals(classname)
+				&& prog.getFilename().equals(filename)) {
+				prog.stopRunning();
+				stoppedPrograms.add(prog);
+			}
+		}
 	}
 }

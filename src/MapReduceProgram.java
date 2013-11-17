@@ -21,7 +21,8 @@ public class MapReduceProgram {
 	private volatile Set<MapCombineJob> mapCombineJobs;
 	private volatile Set<ReduceJob> reduceJobs;
 	private volatile ReduceCombineJob reduceCombineJob;
-	private boolean inMapPhase;
+	private boolean isRunning;
+	private boolean isInMapPhase;
 
 	public MapReduceProgram(int id, Class<?> clazz, String filename, int numBlocks,
 		int numParticipants) {
@@ -31,7 +32,9 @@ public class MapReduceProgram {
 		this.numBlocks = numBlocks;
 		this.numParticipants = numParticipants;
 		
-		inMapPhase = true;
+		isRunning = true;
+		isInMapPhase = true;
+
 		maxKey = Integer.MIN_VALUE;
 		minKey = Integer.MAX_VALUE;
 		mapJobs = Collections.synchronizedSet(new HashSet<MapJob>());
@@ -42,11 +45,11 @@ public class MapReduceProgram {
 		for (int i = -1; i < numParticipants; i++) {
 			jobAssignments.put(i, Collections.synchronizedSet(new HashSet<NodeJob>()));
 		}
-		
+
 		totalJobs = new AtomicInteger(0);
 		allJobs = Collections.synchronizedMap(new HashMap<Integer, NodeJob>());
 	}
-	
+
 	public int createNewJobId() {
 		return totalJobs.getAndIncrement();
 	}
@@ -112,8 +115,8 @@ public class MapReduceProgram {
 	}
 
 	public ReduceCombineJob createReduceCombineJob() {
-		reduceCombineJob = new ReduceCombineJob(id, createNewJobId(), -1, filename, getNumPartitions(),
-			getPartitionReducers());
+		reduceCombineJob = new ReduceCombineJob(id, createNewJobId(), -1, filename,
+			getNumPartitions(), getPartitionReducers());
 		allJobs.put(reduceCombineJob.getJobId(), reduceCombineJob);
 		return reduceCombineJob;
 	}
@@ -122,7 +125,7 @@ public class MapReduceProgram {
 		maxKey = Math.max(maxKey, mapJob.getMaxKey());
 		minKey = Math.min(minKey, mapJob.getMinKey());
 		allJobs.get(mapJob.getJobId()).setDone(true);
-		
+
 		for (MapJob job : mapJobs) {
 			if (!job.isDone()) {
 				return false;
@@ -138,7 +141,7 @@ public class MapReduceProgram {
 				return false;
 			}
 		}
-		inMapPhase = false;
+		isInMapPhase = false;
 		return true;
 	}
 
@@ -205,9 +208,17 @@ public class MapReduceProgram {
 		}
 		return blockLocations;
 	}
+
+	public void stopRunning() {
+		isRunning = false;
+	}
 	
-	public boolean inMapPhase() {
-		return inMapPhase;
+	public boolean isRunning() {
+		return isRunning;
+	}
+
+	public boolean isInMapPhase() {
+		return isInMapPhase;
 	}
 
 	public Class<?> getUserDefinedClass() {

@@ -24,4 +24,6 @@ public interface FacilityManagerMaster extends FacilityManager, Remote {
 	public String getActiveProgramsList() throws RemoteException;
 	
 	public String getCompletedProgramsList() throws RemoteException;
+
+	public void stopProgram(String classname, String filename) throws RemoteException;
 }

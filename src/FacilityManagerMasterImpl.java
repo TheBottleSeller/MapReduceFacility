@@ -209,7 +209,8 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 
 	@Override
 	public String getActiveProgramsList() throws RemoteException {
-		String list = String.format("%-20s %-10s %-20s %-20s%n", "Job", "Status", "Mappers", "Reducers");
+		String list = String.format("%-20s %-10s %-20s %-20s%n", "Job", "Status", "Mappers",
+			"Reducers");
 		list = list.concat(scheduler.getActiveProgramsList());
 		return list;
 	}
@@ -217,5 +218,10 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 	@Override
 	public String getCompletedProgramsList() throws RemoteException {
 		return scheduler.getCompletedProgramsList();
+	}
+
+	@Override
+	public void stopProgram(String classname, String filename) throws RemoteException {
+		scheduler.stopProgram(classname, filename);
 	}
 }
