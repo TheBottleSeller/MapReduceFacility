@@ -37,7 +37,7 @@ public class FacilityManagerMasterImpl extends FacilityManagerImpl implements Fa
 		managers[getNodeId()] = this;
 
 		clusterName = config.getClusterName();
-		rmiPort = config.getMrPort();
+		rmiPort = config.getRmiPort();
 
 		/* FILESYSTEM INIT */
 		fsTable = Collections.synchronizedMap(new HashMap<String, Map<Integer, Set<Integer>>>());

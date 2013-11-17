@@ -11,7 +11,7 @@ public class Config implements Serializable {
 	private static final long serialVersionUID = 1525640055670485006L;
 
 	private static final String[] ARGUMENTS = { "CLUSTER_NAME", "MASTER_IP", "PARTICIPANT_IPS",
-		"FS_READ_PORT", "FS_WRITE_PORT", "MR_PORT", "MAX_MAPS_PER_HOST", "MAX_REDUCES_PER_HOST",
+		"FS_READ_PORT", "FS_WRITE_PORT", "RMI_PORT", "MAX_MAPS_PER_HOST", "MAX_REDUCES_PER_HOST",
 		"REPLICATION_FACTOR", "BLOCK_SIZE" };
 
 	private String clusterName = null;
@@ -21,7 +21,7 @@ public class Config implements Serializable {
 
 	private int fsReadPort;
 	private int fsWritePort;
-	private int mrPort;
+	private int rmiPort;
 
 	private int maxMapsPerHost;
 	private int maxReducesPerHost;
@@ -66,7 +66,7 @@ public class Config implements Serializable {
 					} else if (line.startsWith(ARGUMENTS[4])) {
 						fsWritePort = Integer.parseInt(getArgument(line));
 					} else if (line.startsWith(ARGUMENTS[5])) {
-						mrPort = Integer.parseInt(getArgument(line));
+						rmiPort = Integer.parseInt(getArgument(line));
 					} else if (line.startsWith(ARGUMENTS[6])) {
 						maxMapsPerHost = Integer.parseInt(getArgument(line));
 					} else if (line.startsWith(ARGUMENTS[7])) {
@@ -92,7 +92,7 @@ public class Config implements Serializable {
 
 	public boolean hasBadArguments() {
 		return (clusterName == null || masterIp == null || participantIps == null || fsReadPort < 1
-			|| fsWritePort < 1 || mrPort < 1 || maxMapsPerHost < 1 || maxReducesPerHost < 1
+			|| fsWritePort < 1 || rmiPort < 1 || maxMapsPerHost < 1 || maxReducesPerHost < 1
 			|| replicationFactor < 1 || blockSize < 1);
 	}
 
@@ -124,8 +124,8 @@ public class Config implements Serializable {
 		return fsWritePort;
 	}
 
-	public int getMrPort() {
-		return mrPort;
+	public int getRmiPort() {
+		return rmiPort;
 	}
 
 	public int getMaxMapsPerHost() {
