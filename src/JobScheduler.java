@@ -10,7 +10,7 @@ public class JobScheduler {
 
 	private FacilityManagerMasterImpl master;
 	private Config config;
-	private Map<Integer, MapReduceProgram> activePrograms;
+	private volatile Map<Integer, MapReduceProgram> activePrograms;
 	private Map<Integer, MapReduceProgram> completedPrograms;
 	private AtomicInteger[] activeMaps;
 	private AtomicInteger[] activeReduces;
@@ -44,41 +44,33 @@ public class JobScheduler {
 
 	public String getActiveProgramsList() {
 		String list = "";
-
 		for (MapReduceProgram prog : activePrograms.values()) {
-			String workerList[] = null;
-			Set<Integer> mappers = prog.getMappers();
-
 			if (prog.inMapPhase()) {
-				if (mappers.size() > 0) {
-					int i = 0;
-					workerList = new String[mappers.size()];
-					for (Integer mapper : mappers) {
-						workerList[i++] = config.getParticipantIps()[mapper];
-					}
-				}
-			} else {
-				workerList = config.getParticipantIps();
-			}
-
-			list = list.concat(prog.getFilename() + " " + prog.getUserDefinedClass().getName()
-				+ "\t \t Active \t \t");
-
-			if (mappers.size() > 0) {
-				for (int i = 0; i < workerList.length; i++) {
-					if (i == 0) {
-						list = list.concat(workerList[i] + "\n");
+				boolean first = true;
+				Set<Integer> mappers = prog.getMappers();
+				for (Integer mapper : mappers) {
+					if (first) {
+						list = list.concat(String.format("%-20s %-10s %-20s %-20s %n", prog
+							.getUserDefinedClass().getName() + " " + prog.getFilename(), "Active",
+							config.getParticipantIps()[mapper], ""));
+						first = false;
 					} else {
-						list = list.concat("\t \t \t \t \t \t" + workerList[i] + "\n");
+						list = list.concat(String.format("%-20s %-10s %-20s %-20s %n", "", "",
+							config.getParticipantIps()[mapper], ""));
 					}
 				}
 			} else {
+				System.out.println("IN REDUCE PHASE");
+				String[] workerList = config.getParticipantIps();
 				for (int i = 0; i < workerList.length; i++) {
 					if (workerList[i] != null) {
 						if (i == 0) {
-							list = list.concat("\t \t" + workerList[i] + "\n");
+							list = list.concat(String.format("%-20s %-10s %-20s %-20s %n", prog
+								.getUserDefinedClass().getName() + " " + prog.getFilename(),
+								"Active", "", workerList[i]));
 						} else {
-							list = list.concat("\t \t \t \t \t \t" + workerList[i] + "\n");
+							list = list.concat(String.format("%-20s %-10s %-20s %-20s %n", "", "",
+								"", workerList[i]));
 						}
 					}
 				}
@@ -92,8 +84,8 @@ public class JobScheduler {
 		String list = "";
 
 		for (MapReduceProgram prog : completedPrograms.values()) {
-			list = list.concat(prog.getFilename() + " " + prog.getUserDefinedClass().getName()
-				+ "\t \t \t \t Completed \n");
+			list = list.concat(String.format("%-20s %-10s", prog.getUserDefinedClass().getName()
+				+ " " + prog.getFilename(), "Completed"));
 		}
 
 		return list;
@@ -295,10 +287,9 @@ public class JobScheduler {
 	}
 
 	public void reduceCombineFinished(ReduceCombineJob job) {
-		MapReduceProgram prog = activePrograms.get(job.getId());
+		MapReduceProgram prog = activePrograms.remove(job.getId());
 		prog.reduceCombineFinished(job);
 		System.out.println("The program has finished");
-		activePrograms.remove(prog);
 		completedPrograms.put(prog.getId(), prog);
 	}
 
