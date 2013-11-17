@@ -46,30 +46,40 @@ public class JobScheduler {
 		String list = "";
 
 		for (MapReduceProgram prog : activePrograms.values()) {
-			String workerList[];
-
+			String workerList[] = null;
 			Set<Integer> mappers = prog.getMappers();
-			if (mappers.size() > 0) {
-				int i = 0;
-				workerList = new String[mappers.size()];
-				for (Integer mapper : mappers) {
-					workerList[i++] = config.getParticipantIps()[mapper];
+
+			if (prog.inMapPhase()) {
+				if (mappers.size() > 0) {
+					int i = 0;
+					workerList = new String[mappers.size()];
+					for (Integer mapper : mappers) {
+						workerList[i++] = config.getParticipantIps()[mapper];
+					}
 				}
 			} else {
 				workerList = config.getParticipantIps();
 			}
 
-			list = list.concat(prog.getFilename() + " " + prog.getClass().getName()
-				+ "\t Active \t");
+			list = list.concat(prog.getFilename() + " " + prog.getUserDefinedClass().getName()
+				+ "\t \t Active \t \t");
 
 			if (mappers.size() > 0) {
 				for (int i = 0; i < workerList.length; i++) {
-					list = list.concat(workerList[i] + "\n");
+					if (i == 0) {
+						list = list.concat(workerList[i] + "\n");
+					} else {
+						list = list.concat("\t \t \t \t \t \t" + workerList[i] + "\n");
+					}
 				}
 			} else {
 				for (int i = 0; i < workerList.length; i++) {
 					if (workerList[i] != null) {
-						list = list.concat("\t" + workerList[i] + "\n");
+						if (i == 0) {
+							list = list.concat("\t \t" + workerList[i] + "\n");
+						} else {
+							list = list.concat("\t \t \t \t \t \t" + workerList[i] + "\n");
+						}
 					}
 				}
 			}
@@ -82,8 +92,8 @@ public class JobScheduler {
 		String list = "";
 
 		for (MapReduceProgram prog : completedPrograms.values()) {
-			list = list.concat(prog.getFilename() + " " + prog.getClass().getName()
-				+ "\t Completed \n");
+			list = list.concat(prog.getFilename() + " " + prog.getUserDefinedClass().getName()
+				+ "\t \t \t \t Completed \n");
 		}
 
 		return list;
