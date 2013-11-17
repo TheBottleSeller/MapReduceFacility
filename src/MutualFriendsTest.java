@@ -13,12 +13,12 @@ public class MutualFriendsTest extends MapReduce440 {
 			String person = record.substring(0, record.indexOf(" "));
 			String friends = record.substring(record.indexOf("[") + 1, record.indexOf("]"));
 			List<KVPair<String, String>> tempValues = new ArrayList<KVPair<String, String>>();
-			for (String friend : friends.split(",")) {
-				if (person.hashCode() < friend.hashCode()) {
-					tempValues.add(new KVPair<String, String>(String.format("[%s,%s]", person,
+			for (String friend : friends.split(", ")) {
+				if (person.compareTo(friend) < 0) {
+					tempValues.add(new KVPair<String, String>(String.format("[%s, %s]", person,
 						friend), friends));
 				} else {
-					tempValues.add(new KVPair<String, String>(String.format("[%s,%s]", friend,
+					tempValues.add(new KVPair<String, String>(String.format("[%s, %s]", friend,
 						person), friends));
 				}
 			}
@@ -34,13 +34,15 @@ public class MutualFriendsTest extends MapReduce440 {
 			List<String> friendLists = input.getValue();
 			Set<String> mutualFriends = new HashSet<String>();
 			for (int i = 0; i < friendLists.size(); i++) {
-				List<String> friendList = Arrays.asList(friendLists.get(i).split(","));
+				List<String> friendList = Arrays.asList(friendLists.get(i).split(", "));
 				if (i == 0) {
 					mutualFriends.addAll(friendList);
 				} else {
 					mutualFriends.retainAll(friendList);
 				}
 			}
+			mutualFriends.remove(friends.substring(friends.indexOf("[") + 1, friends.indexOf(",")));
+			mutualFriends.remove(friends.substring(friends.indexOf(" ") + 1, friends.indexOf("]")));
 			return new KVPair<String, String>(friends, Arrays.toString(mutualFriends.toArray()));
 		}
 	}
