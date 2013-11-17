@@ -2,7 +2,7 @@ import java.rmi.RemoteException;
 
 public class HealthChecker extends Thread {
 
-	private static int HEALTH_CHECK_INTERVAL = 000; // check every 2 seconds
+	private static int HEALTH_CHECK_INTERVAL = 2000; // check every 2 seconds
 	private FacilityManagerMasterImpl master;
 	private boolean[] healthy;
 	private int numParticipants;
