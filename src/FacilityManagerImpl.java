@@ -191,7 +191,6 @@ public class FacilityManagerImpl implements FacilityManager {
 
 	@Override
 	public void runMapJob(MapJob mapJob) throws RemoteException {
-		System.out.println("Running local map job");
 		try {
 			MapReduce440 mr = (MapReduce440) mapJob.getClazz().newInstance();
 			Mapper440 mapper = mr.createMapper();

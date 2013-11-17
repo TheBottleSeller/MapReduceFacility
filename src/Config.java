@@ -88,8 +88,6 @@ public class Config implements Serializable {
 		if (hasBadArguments()) {
 			throw new Exception("The given config file has invalid or missing argument(s).");
 		}
-
-		System.out.println("Finished parsing config file.");
 	}
 
 	public boolean hasBadArguments() {
